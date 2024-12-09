@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <!-- 引入 TailwindCSS -->
+  <!-- <script src="https://cdn.tailwindcss.com"></script> -->
+  <script src="static/js/tailwindcss.js"></script>
+  <!-- <script src="https://unpkg.com/vue@2.6.11/dist/vue.js"></script> -->
+  <script src="static/js/vue.js"></script>
+  <!-- <script src="https://unpkg.com/element-ui@2.13.0/lib/index.js"></script> -->
+  <script src="static/js/index.js"></script>
+  <link rel="stylesheet" href="/static/css/inter.css">
+  <link rel="stylesheet" href="static/css/style.css">
+
+  <title>儀錶板測試</title>
+
+</head>
+
+<body class="bg-gray-100">
+  <div id="app" class="flex h-screen">
+    <!-- Sidebar -->
+    <div class="w-64 bg-gray-800 text-white p-4 overflow-y-auto" style="max-height: 100vh;">
+      <h2 class="text-xl font-semibold mb-4">Sidebar</h2>
+      <ul>
+        <!-- 顯示 50 個項目 -->
+        <li v-for="(item, index) in menuItems" :key="index" class="mb-2">
+          <a href="#" class="block py-2 px-4 rounded-md hover:bg-gray-700">
+            {{ item.name }}
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 p-4">
+      <h1 class="text-2xl font-bold mb-4">儀錶板</h1>
+      
+      <!-- 12x20 表格 -->
+      <div class="overflow-x-auto">
+        <table class="min-w-full table-auto bg-white shadow-md rounded-lg">
+          <thead>
+            <tr>
+              <th v-for="(header, index) in columnHeaders" :key="index" class="px-4 py-2 border-b bg-gray-100 text-left">{{ header }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, rowIndex) in tableData" :key="rowIndex">
+              <td v-for="(cell, cellIndex) in row" :key="cellIndex" class="px-4 py-2 border-b text-center">{{ cell }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          // 隨機生成 50 個 sidebar 項目
+          menuItems: Array.from({ length: 50 }, (_, i) => ({ name: `Item ${i + 1}` })),
+          columnHeaders: Array.from({ length: 12 }, (_, i) => `Column ${i + 1}`), // 12 個欄位
+          tableData: this.generateRandomTableData(20, 12) // 生成 20 行, 12 列的隨機表格
+        };
+      },
+      methods: {
+        // 隨機生成表格數據，生成 numRows 行 numColumns 列的隨機數據
+        generateRandomTableData(numRows, numColumns) {
+          const data = [];
+          for (let i = 0; i < numRows; i++) {
+            const row = [];
+            for (let j = 0; j < numColumns; j++) {
+              row.push(Math.floor(Math.random() * 100)); // 隨機生成 0 到 99 之間的數字
+            }
+            data.push(row);
+          }
+          return data;
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

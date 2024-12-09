@@ -1,0 +1,30 @@
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+#app {
+  height: 100%;
+}
+
+
+/* 當螢幕小於一定寬度時，隱藏 sidebar，並顯示 navbar */
+@media (max-width: 1349px) {
+  .sidebar {
+    display: none; /* 隱藏 sidebar */
+  }
+
+  .navbar {
+    display: block; /* 顯示 navbar */
+  }
+
+  .main-content {
+    padding-top: 60px; /* 防止主內容被 navbar 擋住 */
+  }
+}
+
+@media screen and (min-width: 1910px) {
+  .navbar {
+      display: none;
+  }
+}
