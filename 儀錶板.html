@@ -19,39 +19,122 @@
 
 </head>
 
-<body class="bg-gray-100">
-  <div id="app" class="flex h-screen">
+<body class="bg-gray-100 h-full">
+  <div id="app" class="flex h-full">
     <!-- Sidebar -->
-    <div class="w-64 bg-gray-800 text-white p-4 overflow-y-auto" style="max-height: 100vh;">
-      <h2 class="text-xl font-semibold mb-4">Sidebar</h2>
-      <ul>
-        <!-- 顯示 50 個項目 -->
-        <li v-for="(item, index) in menuItems" :key="index" class="mb-2">
-          <a href="#" class="block py-2 px-4 rounded-md hover:bg-gray-700">
-            {{ item.name }}
-          </a>
-        </li>
-      </ul>
+    <div class="w-64 bg-gray-800 text-white p-4 overflow-y-auto flex flex-col justify-start h-full">
+      <div>
+        <h2 class="text-xl font-semibold mb-4 text-center">EAP 儀表板</h2>
+        <ul>
+          <!-- 顯示 50 個項目 -->
+          <li v-for="(item, index) in menuItems" :key="index" class="mb-2">
+            <a href="#" class="block py-2 px-4 rounded-md hover:bg-gray-700 text-center">
+              {{ item.name }}
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="py-4 text-sm text-center">Made By RuiYing</div>
     </div>
 
+
     <!-- Main Content -->
-    <div class="flex-1 p-4">
-      <h1 class="text-2xl font-bold mb-4">儀錶板</h1>
-      
-      <!-- 12x20 表格 -->
-      <div class="overflow-x-auto">
-        <table class="min-w-full table-auto bg-white shadow-md rounded-lg">
-          <thead>
-            <tr>
-              <th v-for="(header, index) in columnHeaders" :key="index" class="px-4 py-2 border-b bg-gray-100 text-left">{{ header }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, rowIndex) in tableData" :key="rowIndex">
-              <td v-for="(cell, cellIndex) in row" :key="cellIndex" class="px-4 py-2 border-b text-center">{{ cell }}</td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="flex-1 p-4 flex flex-col">
+      <!-- Process Bars -->
+      <div class="mb-6">
+        <div class="mb-4">
+          <h2 class="text-lg font-medium mb-2">進度條 1</h2>
+          <div class="relative h-4 w-full bg-gray-200 rounded">
+            <div class="absolute h-4 bg-blue-500 rounded" style="width: 70%;"></div>
+          </div>
+        </div>
+        <div>
+          <h2 class="text-lg font-medium mb-2">進度條 2</h2>
+          <div class="relative h-4 w-full bg-gray-200 rounded">
+            <div class="absolute h-4 bg-green-500 rounded" style="width: 50%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unified Block -->
+      <div class="bg-white shadow-md rounded-lg p-4">
+        <div class="flex space-x-4">
+          <!-- Table Block 1 -->
+          <div class="flex-1">
+            <h3 class="text-md font-semibold mb-2">區塊 1</h3>
+            <table class="min-w-full table-auto">
+              <thead>
+                <tr>
+                  <th class="px-4 py-2 bg-gray-100 border-b">IP</th>
+                  <th class="px-4 py-2 bg-gray-100 border-b">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, rowIndex) in tableBlock1" :key="rowIndex">
+                  <td class="px-4 py-2 border-b text-center">{{ row.ip }}</td>
+                  <td class="px-4 py-2 border-b text-center">{{ row.status }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Table Block 2 -->
+          <div class="flex-1">
+            <h3 class="text-md font-semibold mb-2">區塊 2</h3>
+            <table class="min-w-full table-auto">
+              <thead>
+                <tr>
+                  <th class="px-4 py-2 bg-gray-100 border-b">IP</th>
+                  <th class="px-4 py-2 bg-gray-100 border-b">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, rowIndex) in tableBlock2" :key="rowIndex">
+                  <td class="px-4 py-2 border-b text-center">{{ row.ip }}</td>
+                  <td class="px-4 py-2 border-b text-center">{{ row.status }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Table Block 3 -->
+          <div class="flex-1">
+            <h3 class="text-md font-semibold mb-2">區塊 3</h3>
+            <table class="min-w-full table-auto">
+              <thead>
+                <tr>
+                  <th class="px-4 py-2 bg-gray-100 border-b">IP</th>
+                  <th class="px-4 py-2 bg-gray-100 border-b">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, rowIndex) in tableBlock3" :key="rowIndex">
+                  <td class="px-4 py-2 border-b text-center">{{ row.ip }}</td>
+                  <td class="px-4 py-2 border-b text-center">{{ row.status }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Table Block 4 -->
+          <div class="flex-1">
+            <h3 class="text-md font-semibold mb-2">區塊 4</h3>
+            <table class="min-w-full table-auto">
+              <thead>
+                <tr>
+                  <th class="px-4 py-2 bg-gray-100 border-b">IP</th>
+                  <th class="px-4 py-2 bg-gray-100 border-b">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, rowIndex) in tableBlock4" :key="rowIndex">
+                  <td class="px-4 py-2 border-b text-center">{{ row.ip }}</td>
+                  <td class="px-4 py-2 border-b text-center">{{ row.status }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -61,28 +144,21 @@
       el: '#app',
       data() {
         return {
-          // 隨機生成 50 個 sidebar 項目
           menuItems: Array.from({ length: 50 }, (_, i) => ({ name: `Item ${i + 1}` })),
-          columnHeaders: Array.from({ length: 12 }, (_, i) => `Column ${i + 1}`), // 12 個欄位
-          tableData: this.generateRandomTableData(20, 12) // 生成 20 行, 12 列的隨機表格
+          tableBlock1: this.generateRandomTableData(15),
+          tableBlock2: this.generateRandomTableData(15),
+          tableBlock3: this.generateRandomTableData(15),
+          tableBlock4: this.generateRandomTableData(15),
         };
       },
       methods: {
-        // 隨機生成表格數據，生成 numRows 行 numColumns 列的隨機數據
-        generateRandomTableData(numRows, numColumns) {
-          const data = [];
-          for (let i = 0; i < numRows; i++) {
-            const row = [];
-            for (let j = 0; j < numColumns; j++) {
-              row.push(Math.floor(Math.random() * 100)); // 隨機生成 0 到 99 之間的數字
-            }
-            data.push(row);
-          }
-          return data;
-        }
-      }
+        generateRandomTableData(rows) {
+          return Array.from({ length: rows }, () => ({
+            ip: `192.168.0.${Math.floor(Math.random() * 255)}`,
+            status: Math.random() > 0.5 ? 'Online' : 'Offline',
+          }));
+        },
+      },
     });
   </script>
 </body>
-
-</html>
