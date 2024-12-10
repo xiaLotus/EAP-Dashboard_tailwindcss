@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <!-- 引入 TailwindCSS -->
+  <script src="static/js/tailwindcss.js"></script>
+  <script src="static/js/vue.js"></script>
+  <link rel="stylesheet" href="/static/css/inter.css">
+  <link rel="stylesheet" href="static/css/style.css">
+
+  <title>儀錶板測試</title>
+</head>
+
+<body class="bg-[#272727]">
+  <div id="app" class="flex h-screen">
+    <!-- Sidebar -->
+    <div class="w-64 bg-gray-800 text-white p-4 overflow-y-auto" style="max-height: 100vh;">
+        <h2 class="text-xl font-semibold mb-4 text-center">EAP Dashboard</h2>
+        <ul class="text-center"> <!-- 让ul的文字也居中 -->
+          <li v-for="(item, index) in menuItems" :key="index" class="mb-2">
+            <a href="#" class="block py-2 px-4 rounded-md hover:bg-gray-700">
+              {{ item.name }}
+            </a>
+          </li>
+        </ul>
+        <h4 class="text-sm font-semibold mb-3 text-center">Made By RuiYing</h4>
+      </div>
+      
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col p-4 space-y-6 overflow-hidden relative">
+          <!-- 进度条 -->
+          <div class="mb-2">
+            <!-- 進度條 1 -->
+            <div class="mb-8">
+              <h4 class="text-2xl font-bold mb-2 text-center text-white">12121</h1>
+              <div class="w-full bg-gray-600 rounded-full h-5 mb-4">
+                <div class="bg-blue-600 h-5 rounded-full" style="width: 60%"></div> <!-- 進度條 1，調整 width 值以改變進度 -->
+              </div>
+            </div>
+            
+            <!-- 進度條 2 -->
+            <div>
+              <h4 class="text-2xl font-bold mb-2 text-center text-white">12121</h1>
+              <div class="w-full bg-gray-600 rounded-full h-5 mb-4">
+                <div class="bg-green-600 h-5 rounded-full" style="width: 40%"></div> <!-- 進度條 2，調整 width 值以改變進度 -->
+              </div>
+            </div>
+          </div>
+      <!-- <h1 class="text-3xl font-bold mb-6 text-center text-white">儀錶板</h1> -->
+
+      <!-- Carousel Wrapper -->
+      <div class="flex items-center relative">
+        <!-- Left Arrow -->
+        <button 
+            @click="prevCard" 
+            class="btn absolute left-2 z-10 opacity-90 hover:opacity-100 transition transform -translate-y-1/2 bg-white text-black"
+            style="top: 50%;"
+        >
+            &#8592;
+        </button>
+
+        <!-- Cards Container -->
+        <div class="flex w-full overflow-hidden relative">
+          <!-- 第一個卡片 -->
+          <div class="min-w-full transition-transform duration-300" :style="{ transform: `translateX(-${currentCard * 100}%)` }">
+            <div class="card bg-[#272727]"> 
+              <!-- <h2 class="text-xl font-semibold mb-4 text-center">Card 1</h2> -->
+              <div class="flex flex-wrap justify-between gap-4">
+                <div v-for="(row, index) in card1Data" :key="index" class="bg-[#272727] p-4 shadow-sm rounded-lg flex-1 min-w-[22%] max-w-[22%]">
+                  <!-- <h3 class="text-lg font-medium mb-2 text-center">Table {{ index + 1 }}</h3> -->
+                  <div class="overflow-x-auto">
+                    <table class="w-full table-auto bg-black text-white">
+                        <thead>
+                          <tr>
+                            <th class="px-4 py-2 border-b text-white text-left">IP Address</th>
+                            <th class="px-4 py-2 border-b text-white text-left">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="item in row" :key="item.ip" class="bg-black hover:bg-gray-800">
+                            <td class="px-4 py-2 border-b text-white">{{ item.ip }}</td>
+                            <td class="px-4 py-2 border-b text-white">{{ item.status }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 第二個卡片 -->
+          <div class="min-w-full transition-transform duration-300" :style="{ transform: `translateX(-${currentCard * 100}%)` }">
+            <div class="card bg-[#272727]"> 
+              <!-- <h2 class="text-xl font-semibold mb-4 text-center">Card 2</h2> -->
+              <div class="flex flex-wrap justify-between gap-4">
+                <div v-for="(row, index) in card1Data" :key="index" class="bg-[#272727] p-4 shadow-sm rounded-lg flex-1 min-w-[22%] max-w-[22%]">
+                  <!-- <h3 class="text-lg font-medium mb-2 text-center">Table {{ index + 1 }}</h3> -->
+                  <div class="overflow-x-auto">
+                    <table class="w-full table-auto bg-black text-white">
+                        <thead>
+                          <tr>
+                            <th class="px-4 py-2 border-b text-white text-left">IP Address</th>
+                            <th class="px-4 py-2 border-b text-white text-left">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="item in row" :key="item.ip" class="bg-black hover:bg-gray-800">
+                            <td class="px-4 py-2 border-b text-white">{{ item.ip }}</td>
+                            <td class="px-4 py-2 border-b text-white">{{ item.status }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 第三個卡片 -->
+          <div class="min-w-full transition-transform duration-300" :style="{ transform: `translateX(-${currentCard * 100}%)` }">
+            <div class="card bg-[#272727]"> 
+              <!-- <h2 class="text-xl font-semibold mb-4 text-center">Card 3</h2> -->
+              <div class="flex flex-wrap justify-between gap-4">
+                <div v-for="(row, index) in card1Data" :key="index" class="bg-[#272727] p-4 shadow-sm rounded-lg flex-1 min-w-[22%] max-w-[22%]">
+                  <!-- <h3 class="text-lg font-medium mb-2 text-center">Table {{ index + 1 }}</h3> -->
+                  <div class="overflow-x-auto">
+                    <table class="w-full table-auto bg-black text-white">
+                        <thead>
+                          <tr>
+                            <th class="px-4 py-2 border-b text-white text-left">IP Address</th>
+                            <th class="px-4 py-2 border-b text-white text-left">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="item in row" :key="item.ip" class="bg-black hover:bg-gray-800">
+                            <td class="px-4 py-2 border-b text-white">{{ item.ip }}</td>
+                            <td class="px-4 py-2 border-b text-white">{{ item.status }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+          <!-- 第四個卡片 -->
+          <div class="min-w-full transition-transform duration-300" :style="{ transform: `translateX(-${currentCard * 100}%)` }">
+            <div class="card bg-[#272727]"> 
+              <!-- <h2 class="text-xl font-semibold mb-4 text-center">Card 4</h2> -->
+              <div class="flex flex-wrap justify-between gap-4">
+                <div v-for="(row, index) in card1Data" :key="index" class="bg-[#272727] p-4 shadow-sm rounded-lg flex-1 min-w-[22%] max-w-[22%]">
+                  <!-- <h3 class="text-lg font-medium mb-2 text-center">Table {{ index + 1 }}</h3> -->
+                  <div class="overflow-x-auto">
+                    <table class="w-full table-auto bg-black text-white">
+                        <thead>
+                          <tr>
+                            <th class="px-4 py-2 border-b text-white text-left">IP Address</th>
+                            <th class="px-4 py-2 border-b text-white text-left">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="item in row" :key="item.ip" class="bg-black hover:bg-gray-800">
+                            <td class="px-4 py-2 border-b text-white">{{ item.ip }}</td>
+                            <td class="px-4 py-2 border-b text-white">{{ item.status }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 第五個卡片 -->
+          <div class="min-w-full transition-transform duration-300" :style="{ transform: `translateX(-${currentCard * 100}%)` }">
+            <div class="card bg-[#272727]"> 
+              <!-- <h2 class="text-xl font-semibold mb-4 text-center">Card 5</h2> -->
+              <div class="flex flex-wrap justify-between gap-4">
+                <div v-for="(row, index) in card1Data" :key="index" class="bg-[#272727] p-4 shadow-sm rounded-lg flex-1 min-w-[22%] max-w-[22%]">
+                  <!-- <h3 class="text-lg font-medium mb-2 text-center">Table {{ index + 1 }}</h3> -->
+                  <div class="overflow-x-auto">
+                    <table class="w-full table-auto bg-black text-white">
+                        <thead>
+                          <tr>
+                            <th class="px-4 py-2 border-b text-white text-left">IP Address</th>
+                            <th class="px-4 py-2 border-b text-white text-left">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="item in row" :key="item.ip" class="bg-black hover:bg-gray-800">
+                            <td class="px-4 py-2 border-b text-white">{{ item.ip }}</td>
+                            <td class="px-4 py-2 border-b text-white">{{ item.status }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+          <!-- ... 依此類推直到第五個卡片 -->
+        </div>
+
+        <!-- Right Arrow -->
+        <button 
+            @click="nextCard" 
+            class="btn absolute right-2 z-10 opacity-90 hover:opacity-100 transition transform -translate-y-1/2 bg-white text-black"
+            style="top: 50%;"
+        >
+            &#8594;
+        </button>        
+      </div>
+    </div>
+  </div>
+
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        return {
+          menuItems: Array.from({ length: 50 }, (_, i) => ({ name: `Menu Item ${i + 1}` })),
+          currentCard: 0,
+          card1Data: this.generateCardData(1),
+          card2Data: this.generateCardData(2),
+          card3Data: this.generateCardData(3),
+          card4Data: this.generateCardData(4),
+          card5Data: this.generateCardData(5),
+        };
+      },
+      methods: {
+        generateCardData(cardNumber) {
+          const statuses = ['Active', 'Inactive', 'Error', 'Pending'];
+          const data = [];
+          for (let i = 0; i < 4; i++) {
+            const table = [];
+            for (let j = 0; j < 15; j++) {
+              const ip = `192.168.${cardNumber}.${i * 15 + j + 1}`;
+              const status = statuses[Math.floor(Math.random() * statuses.length)];
+              table.push({ ip, status });
+            }
+            data.push(table);
+          }
+          return data;
+        },
+        prevCard() {
+          this.currentCard = (this.currentCard - 1 + 5) % 5; // 共 5 張卡片
+        },
+        nextCard() {
+          this.currentCard = (this.currentCard + 1) % 5;
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

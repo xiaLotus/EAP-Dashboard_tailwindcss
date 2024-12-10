@@ -1,30 +1,51 @@
-html, body {
-  height: 100%;
-  margin: 0;
+body {
+  background: linear-gradient(135deg, #0f0f0f, #2c2c2c);
 }
 
-#app {
-  height: 100%;
+.card {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.7)); /* Dark gradient */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  border-radius: 12px;
+  padding: 20px;
+  color: white;
 }
 
-
-/* 當螢幕小於一定寬度時，隱藏 sidebar，並顯示 navbar */
-@media (max-width: 1349px) {
-  .sidebar {
-    display: none; /* 隱藏 sidebar */
-  }
-
-  .navbar {
-    display: block; /* 顯示 navbar */
-  }
-
-  .main-content {
-    padding-top: 60px; /* 防止主內容被 navbar 擋住 */
-  }
+.table th, .table td {
+  color: white;
+  border: 1px solid #444444;
+  padding: 12px;
 }
 
-@media screen and (min-width: 1910px) {
-  .navbar {
-      display: none;
-  }
+.table th {
+  background-color: #333333;
+}
+
+.table tbody tr {
+  background-color: #222222;
+}
+
+.table tr:hover {
+  background-color: #444444;
+}
+
+.btn {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 10px;
+  border-radius: 50%;
+  font-size: 24px;
+  border: none;
+  transition: all 0.3s;
+}
+
+.btn:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn:focus {
+  outline: none;
+}
+
+.header-text {
+  color: white;
 }
