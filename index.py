@@ -14,18 +14,30 @@ CORS(app)  # 啟用跨域請求
 def get_menu_items():
     return [{"name": f"Menu Item {i + 1}"} for i in range(50)]
 
+# @app.get("/card-data/<int:card_number>")
+# def get_card_data(card_number: int):
+#     statuses = ["Active", "Inactive", "Error", "Pending"]
+#     data = []
+#     for i in range(4):
+#         table = []
+#         for j in range(15):
+#             ip = f"192.168.{card_number}.{i * 15 + j + 1}"
+#             status = statuses[j % len(statuses)]
+#             table.append({"ip": ip, "status": status})
+#         data.append(table)
+#     print(data)
+#     return jsonify(data)
+
 @app.get("/card-data/<int:card_number>")
 def get_card_data(card_number: int):
     statuses = ["Active", "Inactive", "Error", "Pending"]
     data = []
-    for i in range(4):
-        table = []
-        for j in range(15):
-            ip = f"192.168.{card_number}.{i * 15 + j + 1}"
-            status = statuses[j % len(statuses)]
-            table.append({"ip": ip, "status": status})
-        data.append(table)
+    for i in range(255):  # 產生 255 個 IP
+        ip = f"192.168.{card_number}.{i + 1}"
+        status = statuses[i % len(statuses)]  # 循環分配狀態
+        data.append({"ip": ip, "status": status})
     return jsonify(data)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

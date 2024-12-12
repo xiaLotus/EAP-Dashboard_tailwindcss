@@ -2,4 +2,4 @@
 
 #### 模擬圖樣
 
-![alt text](image5.png)
+![alt text](image.png)
