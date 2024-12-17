@@ -23,7 +23,7 @@
         <li v-for="(item, index) in menuItems" :key="index" class="mb-2">
           <a href="#"
              class="block py-2 px-4 rounded-md hover:bg-gray-700"
-             @click.prevent="onMenuClick(index + 1)">
+             @click.prevent="onMenuClick(item.name)">
             {{ item.name }}
           </a>
         </li>
@@ -50,12 +50,32 @@
               <tbody>
                 <tr v-for="(item, rowIndex) in table" :key="rowIndex">
                   <td class="px-4 py-2 border-b text-white">{{ item.ip }}</td>
-                  <td class="px-4 py-2 border-b text-white">{{ item.status }}</td>
+                  <td class="px-4 py-2 border-b text-white">
+                    <button @click="editStatus(item)" class="bg-blue-500 text-white px-2 py-1 rounded-md hover:bg-blue-400">
+                      {{ item.status }}
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
+
+      <!-- 編輯卡片：當點擊按鈕時顯示，並允許更改狀態 -->
+      <div v-if="isEditing" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+        <div class="bg-gray-800 p-6 rounded-md max-w-md w-full">
+          <h3 class="text-xl mb-4 text-white">Edit Status</h3>
+          <p><strong class="text-white">IP Address:</strong> {{ currentItem.ip }}</p>
+          <div class="my-4">
+            <label for="status" class="block text-sm text-white">Status:</label>
+            <input v-model="currentItem.status" type="text" id="status" 
+            class="border border-gray-400 p-2 w-full rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black" />
+          </div>
+          <button @click="saveStatus" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-400 focus:outline-none focus:ring-2 focus:ring-green-300">Save</button>
+          <button @click="cancelEdit" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 mt-2">Cancel</button>
+        </div>
+      </div>
+
 
         <!-- 分頁按鈕 -->
         <!-- :disabled="currentPage === totalPages">下一頁</button> -->
@@ -84,6 +104,11 @@
           currentCard: null, // 當前卡片
           currentPage: 1, // 當前頁
           pageSize: 60, // 每頁顯示條數
+
+          isEditing: false, // 是否處於編輯模式
+          currentItem: null, // 當前編輯的項目
+
+          location: '', // 存儲當前選擇的地點
         };
       },
       computed: {
@@ -114,8 +139,8 @@
       async mounted() {
         await this.fetchMenuItems();
         if (this.menuItems.length > 0) {
-          this.currentCard = 1; // 默認加載第一個卡片
-          await this.fetchCardData(this.currentCard);
+          const firstLocation = this.menuItems[0].name; // 使用第一個 Sidebar 的名稱
+          await this.fetchCardData(firstLocation);     // 加載第一個卡片數據
         }
 
         // 監聽鍵盤事件
@@ -132,9 +157,13 @@
             console.error("Error fetching menu items:", error);
           }
         },
-        async fetchCardData(cardNumber) {
+        async fetchCardData(location) {
           try {
-            const response = await fetch(`http://127.0.0.1:5000/card-data/${cardNumber}`);
+
+            const url = `http://127.0.0.1:5000/card-data/${location}`;
+            console.log("Fetching data from URL:", url); // 可以在控制台檢查 URL
+            const response = await fetch(url);
+            // console.log("Fetching URL:", url); // 確認 URL 正確性
             if (!response.ok) throw new Error(`API error: ${response.status}`);
             const rawData = await response.json();
 
@@ -142,13 +171,15 @@
             this.cardData = rawData;
             this.currentPage = 1;
           } catch (error) {
-            console.error(`Error fetching card data for card ${cardNumber}:`, error);
+            console.error(`Error fetching card data for card ${location}:`, error);
             this.cardData = [];
           }
         },
-        onMenuClick(cardNumber) {
-          this.currentCard = cardNumber;
-          this.fetchCardData(cardNumber);
+        onMenuClick(location) {
+          // this.currentCard = location;
+          this.location = location;  // 將選擇的 location 設置到 Vue 實例
+          console.log("Clicked location:", location); // 輸出選擇的 location
+          this.fetchCardData(location);
         },
 
         prevPage() {
@@ -166,6 +197,52 @@
             this.nextPage(); // 右箭頭，下一頁
           }
         },
+
+        editStatus(item) {
+          this.currentItem = { ...item }; // 克隆該項目以便編輯
+          this.isEditing = true;
+        },
+
+            // 保存更改並發送到後端
+        async saveStatus() {
+          try {
+            const response = await fetch(`http://127.0.0.1:5000/update-status/${this.currentItem.ip}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                ip: this.currentItem.ip,
+                status: this.currentItem.status,
+                location: this.location, 
+              }),
+            });
+
+            if (!response.ok) {
+              throw new Error(`Failed to update status: ${response.status}`);
+            }
+
+            // 更新成功後，更新前端數據
+            const index = this.cardData.findIndex(item => item.ip === this.currentItem.ip);
+            if (index !== -1) {
+              this.cardData[index].status = this.currentItem.status;
+            }
+
+            // 退出編輯模式
+            this.isEditing = false;
+            this.currentItem = null;
+          } catch (error) {
+            console.error('Error saving status:', error);
+          }
+        },
+
+
+        // 取消編輯
+        cancelEdit() {
+          this.isEditing = false;
+          this.currentItem = null;
+        },
+
       },
     });
   </script>
