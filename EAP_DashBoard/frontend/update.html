@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP 表上傳介面</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="../static/js/tailwindcss.js"></script>
+    <!-- 引入 Element UI CSS -->
+    <link rel="stylesheet" href="../static/css/element-plus-index.css">
+
+</head>
+<body class="flex items-center justify-center min-h-screen bg-[#272727]">
+
+<div id="app" class="w-full max-w-2xl p-6 bg-gray-300 rounded-xl shadow-xl">
+  <!-- 卡片內容 -->
+  <h2 class="text-3xl font-semibold text-center text-gray-800 mb-6">IP 表上傳</h2>
+
+  <el-upload
+    ref="uploadRef"
+    class="upload-demo"
+    action="http://127.0.0.1:5000/upload"
+    multiple
+    drag
+    :auto-upload="false"
+    name="files"
+    accept=".csv,.xlsx,"
+    :on-success="handleSuccess"
+    :on-error="handleError"
+  >
+    <el-icon>
+      <i class="el-icon el-icon--upload">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" class="text-gray-500">
+          <path fill="currentColor" d="M544 864V672h128L512 480 352 672h128v192H320v-1.6c-5.376.32-10.496 1.6-16 1.6A240 240 0 0 1 64 624c0-123.136 93.12-223.488 212.608-237.248A239.808 239.808 0 0 1 512 192a239.872 239.872 0 0 1 235.456 194.752c119.488 13.76 212.48 114.112 212.48 237.248a240 240 0 0 1-240 240c-5.376 0-10.56-1.28-16-1.6v1.6z"></path>
+        </svg>
+      </i>
+    </el-icon>
+    
+    <div class="el-upload__text text-gray-700">
+      拖曳檔案至此，或<em class="text-blue-500">點擊上傳</em>
+    </div>
+    <template #tip>
+      <div class="el-upload__tip text-sm text-gray-500">
+        每個檔案大小限制為 10MB，可同時上傳多個檔案
+          <a href="../static/source/範例_(Security C).csv" class="text-blue-500 underline" download>
+            下載範例檔案
+          </a>
+      </div>
+    </template>
+  </el-upload>
+
+  <div class="mt-6 flex space-x-4">
+    <el-button type="default" class="flex-1" @click="goBack">
+      返回
+    </el-button>
+    <el-button type="primary" class="flex-1" @click="confirmBeforeUpload">
+      確認上傳
+    </el-button>
+  </div>
+</div>
+
+<!-- 引入 Vue 3 -->
+<script src="../static/js/vue.global.js"></script>
+<!-- 引入 Element UI JS -->
+<script src="../static/js/element-plus-index.full.js"></script>
+<!-- 引入 Element UI 圖標 -->
+<script src="../static/js/Element-Plus-Icons-Vue.index.iife.min.js"></script>
+
+<script src="../static/js/update_data.js"></script>
+
+</body>
+</html>

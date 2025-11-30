@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Page</title>
+    <script src="../static/js/tailwindcss.js"></script>
+    <script src="../static/js/vue.global.js"></script>
+    <link rel="stylesheet" href="../static/css/inter.css">
+    <link rel="stylesheet" href="../static/css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body class="bg-[#272727] text-white">
+  <div id="app" class="flex h-screen">
+    <!-- sidebar start -->
+    <div class="w-64 bg-gray-800 text-white p-4 overflow-y-auto" style="max-height: 100vh;">
+      <a @click.prevent='showHome' class="block py-2 px-4 rounded-md hover:bg-gray-700 text-center justify-center">EAP Dashboard</a>
+      <ul class="text-center">
+        <li v-for="unit in unitfolders" :key="unit" class="mb-2">
+          <a href="#"
+              class="block py-2 px-4 rounded-md hover:bg-gray-700 text-center justify-center"
+              @click.prevent="onUnitClick(unit)">
+                {{ unit }}
+          </a>
+
+          <!-- 子資料夾下拉選單 -->
+          <div v-if="selectedUnit === unit" class="ml-4">
+            <ul>
+              <li v-for="floorfolder in floorfolders" :key="floorfolder" class="text-gray-300 mb-2 relative">
+                <a href="#"
+                  class="block py-2 px-4 rounded-md text-left md:text-center hover:bg-gray-600 flex justify-center w-full pl-1"
+                    @click.prevent="onFloorfolderClick(floorfolder)">
+                    {{ floorfolder }}
+                </a>
+              </li>
+            </ul>
+          </div>
+        </li>
+      </ul>
+      <p 
+        class="block py-2 px-4 rounded-md hover:bg-gray-700 text-center justify-center"
+        @click="toggleSuixiu"
+        >
+        歲修
+      </p>
+      <p 
+        class="block py-2 px-4 rounded-md hover:bg-gray-700 text-center justify-center"
+        @click="show_movein"
+        >
+        匯入
+      </p>
+
+      <p 
+        class="block py-2 px-4 rounded-md hover:bg-gray-700 text-center justify-center"
+        @click="show_moveout"
+        >
+        匯出
+      </p>
+
+      <a class="block py-2 px-4 rounded-md hover:bg-gray-700 text-center justify-center">Made By RuiYing <br>©<br>2024 - {{ this.currentYear }} </a>
+    </div>
+    <!-- Sidebar end -->
+
+    <!-- 右側子側邊欄 start -->
+    <div v-if="isSubSidebarVisible" class="w-64 bg-gray-700 text-white p-4 overflow-y-auto absolute left-64 top-64 h-auto" style="z-index: 999;">
+      <ul>
+        <li>
+          <button @click="showtotalDataButton" class="block py-2 px-4 rounded-md hover:bg-gray-600 w-full text-left">
+            F1/F3/F5 總表
+          </button>
+        </li>
+        <li>
+          <button @click="showEachFloordataButton" class="block py-2 px-4 rounded-md hover:bg-gray-600 w-full text-left">
+            F1/F3/F5 各樓層
+          </button>
+        </li>
+        <li>
+          <button @click="showsuixiualldata(this.currentPage)" class="block py-2 px-4 rounded-md hover:bg-gray-600 w-full text-left">
+            歲修資料
+          </button>
+        </li>
+      </ul>
+    </div>
+    <!-- 右側子側邊欄 end -->
+
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col p-4 space-y-2 overflow-hidden relative">
+      <!-- mb-2 -->
+      <div class="mb-1">
+        <!-- 左右左右 -->
+        <div class="grid grid-cols-2 gap-4 mb-2">
+          <!-- 進度條 1 -->
+          <div class="mb-2">
+            <h5 class="text-2xl font-bold mb-2 text-left text-white">IP 使用率 {{ ip_Success_Rate }}</h4>
+              <div class="relative h-7 w-full bg-gray-200 rounded">
+                <div 
+                  class="absolute top-0 left-0 h-full bg-blue-600 rounded"
+                  :style="{ width: progressBar1 + '%',
+                  backgroundColor: getProgressStatus(progressBar1) 
+                  
+                  }">
+                  <!-- 顯示進度百分比 -->
+                  <span class="absolute inset-0 flex items-center justify-center text-white font-semibold">
+                    {{ progressBar1 }}%
+                  </span>
+                </div>
+              </div>
+          </div>
+
+          <!-- 進度條 2 -->
+          <div class="mb-2">
+            <h5 class="text-2xl font-bold mb-2 text-left text-white">EAP 妥善率 {{ EAP_Success_Rate }}</h5>
+            <div class="relative h-7 w-full bg-gray-200 rounded">
+              <div 
+                class="absolute top-0 left-0 h-full bg-blue-600 rounded"
+                :style="{ width: progressBar2 + '%',
+                backgroundColor: getProgressStatus(progressBar2) 
+                }">
+                <!-- 顯示進度百分比 -->
+                <span class="absolute inset-0 flex items-center justify-center text-white font-semibold">
+                  {{ progressBar2 }}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 進度條 1 -->
+          <div class="mb-2">
+            <h5 class="text-2xl font-bold mb-2 text-left text-white">EQP 妥善率 {{ this.EQP_Success_Rate }}</h4>
+              <div class="relative h-7 w-full bg-gray-200 rounded">
+                <div 
+                  class="absolute top-0 left-0 h-full bg-blue-600 rounded"
+                  :style="{ width: progressBar3 + '%',
+                  backgroundColor: getProgressStatus(progressBar3) 
+                  
+                  }">
+                  <!-- 顯示進度百分比 -->
+                  <span class="absolute inset-0 flex items-center justify-center text-white font-semibold">
+                    {{ progressBar3 }}%
+                  </span>
+                </div>
+              </div>
+          </div>
+
+          <!-- 進度條 1 -->
+          <div class="mb-2">
+            <h5 class="text-2xl font-bold mb-2 text-left text-white">Switch 妥善率 {{ this.Switch_Success_Rate }}</h4>
+              <div class="relative h-7 w-full bg-gray-200 rounded">
+                <div 
+                  class="absolute top-0 left-0 h-full bg-blue-600 rounded"
+                  :style="{ width: progressBar4 + '%',
+                  backgroundColor: getProgressStatus(progressBar4) 
+                  
+                  }">
+                  <!-- 顯示進度百分比 -->
+                  <span class="absolute inset-0 flex items-center justify-center text-white font-semibold">
+                    {{ progressBar4 }}%
+                  </span>
+                </div>
+              </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex space-x-5 justify-between w-full">
+        <!-- 按钮组容器 -->
+        <div class="flex space-x-5">
+          <div v-if="needAllButton">
+            <!-- class="w-20 h-6 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300" -->
+            <div class="flex items-center ps-1 dark:border-gray-700">
+              <button 
+                :class="{
+                  'w-20 h-6 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-green-600 text-white': checkboxes.all,
+                  'w-20 h-6 rounded-md focus:outline-none focus:ring-2 bg-gray-500 text-gray-800 border-2 border-dashed border-white': !checkboxes.all
+                }" 
+                @click="toggleCheckbox('all')" >
+                ALL
+              </button>
+            </div>
+          </div>
+
+          <div v-if="needEAPButton">
+            <div class="flex items-center ps-1 dark:border-gray-700">
+              <button 
+                :class="{
+                  'w-20 h-6 rounded-md focus:outline-none focus:ring-2 bg-green-600 text-white': checkboxes.eap, 
+                  'w-20 h-6 rounded-md focus:outline-none focus:ring-2 bg-gray-500 text-gray-800 border-2 border-dashed border-white': !checkboxes.eap
+                }" 
+                @click="toggleCheckbox('eap')" 
+                >
+                EAP
+              </button>
+            </div>
+          </div>
+
+          <div v-if="needEQPButton">
+            <div class="flex items-center ps-1 dark:border-gray-700">
+              <button 
+                :class="{
+                  'w-20 h-6 rounded-md focus:outline-none focus:ring-2 bg-green-600 text-white': checkboxes.eqp, 
+                  'w-20 h-6 rounded-md focus:outline-none focus:ring-2 bg-gray-500 text-gray-800 border-2 border-dashed border-white': !checkboxes.eqp
+                }" 
+                  @click="toggleCheckbox('eqp')" 
+                >
+                EQP
+              </button>
+            </div>
+          </div>
+      
+          <div v-if="needSwitchButton">
+            <div class="flex items-center ps-1 dark:border-gray-700">
+              <button 
+                :class="{
+                  'w-20 h-6 rounded-md focus:outline-none focus:ring-2 bg-green-600 text-white': checkboxes.switch, 
+                  'w-20 h-6 rounded-md focus:outline-none focus:ring-2 bg-gray-500 text-gray-800 border-2 border-dashed border-white': !checkboxes.switch
+                }" 
+                @click="toggleCheckbox('switch')" >
+                Switch
+              </button>
+            </div>
+          </div>
+
+
+          <div v-if="needAlive_or_DaedButton">
+            <div class="flex items-center ps-1 dark:border-gray-700">
+              <button 
+                :class="{
+                  'w-20 h-6 rounded-md focus:outline-none focus:ring-2 bg-green-600 text-white': aliveOrDeadText === 'A',
+                  'w-20 h-6 rounded-md focus:outline-none focus:ring-2 bg-red-600 text-white': aliveOrDeadText === 'D',
+                  'w-20 h-6 rounded-md focus:outline-none focus:ring-2 bg-gray-500 text-gray-800 border-2 border-dashed border-white': aliveOrDeadText !== 'A' && aliveOrDeadText !== 'D'
+                }" 
+                @click="toggleCheckbox('alive_or_dead')" 
+                
+                >
+                {{ aliveOrDeadText }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 最右边的 Add 按钮 -->
+        <div class="ml-auto flex space-x-2">
+          <div v-if="resource">
+            <button @click.prevent="backup()" class="bg-[#779BB8] text-white py-1.35 px-4 rounded-md hover:bg-[#3D5A80]">
+              <img src="../static/picture/go-back-arrow-svgrepo-com.png" class="w-6 h-6">
+            </button>
+          </div>
+          <div v-if="needAddButton">
+            <button @click.prevent="add_New_suixiu_data()" class="bg-[#779BB8] text-white py-1.35 px-4 rounded-md hover:bg-[#3D5A80]">
+              Add
+            </button>
+          </div>
+        </div>
+      </div>
+    
+      <div v-if="showFoneFthreecard" 
+          class="card bg-[#272727] h-[750px] p-12 rounded-2xl shadow-2xl flex items-center justify-center">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-12 text-center w-full justify-items-center">
+
+          <!-- F1 -->
+          <div class="flex flex-col items-center w-full">
+            <h2 class="text-white text-4xl font-bold mb-6">F1</h2>
+            <div class="relative w-[400px] h-[400px] mx-auto">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 400 400">
+                <!-- 背景圈 -->
+                <circle class="text-gray-700" stroke-width="25" stroke="currentColor" fill="none" cx="200" cy="200" r="170"/>
+                <!-- 進度圈 -->
+                <circle 
+                  :class="{
+                    'text-red-500': F1_EAP_Success_Rate <= 60,
+                    'text-yellow-400': F1_EAP_Success_Rate > 60 && F1_EAP_Success_Rate <= 80,
+                    'text-green-400': F1_EAP_Success_Rate > 80
+                  }"
+                  stroke-width="25" 
+                  stroke-linecap="round" 
+                  stroke="currentColor" 
+                  fill="none"
+                  cx="200" cy="200" r="170"
+                  :stroke-dasharray="2 * Math.PI * 170"
+                  :stroke-dashoffset="(2 * Math.PI * 170) * (1 - F1_EAP_Success_Rate / 100)"/>
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center text-white text-6xl font-extrabold">
+                {{ F1_EAP_Success_Rate }}%
+              </div>
+            </div>
+          </div>
+
+          <!-- F3 -->
+          <div class="flex flex-col items-center w-full">
+            <h2 class="text-white text-4xl font-bold mb-6">F3</h2>
+            <div class="relative w-[400px] h-[400px] mx-auto">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 400 400">
+                <circle class="text-gray-700" stroke-width="25" stroke="currentColor" fill="none" cx="200" cy="200" r="170"/>
+                <circle 
+                  :class="{
+                    'text-red-500': F3_EAP_Success_Rate <= 60,
+                    'text-yellow-400': F3_EAP_Success_Rate > 60 && F3_EAP_Success_Rate <= 80,
+                    'text-green-400': F3_EAP_Success_Rate > 80
+                  }"
+                  stroke-width="25" 
+                  stroke-linecap="round" 
+                  stroke="currentColor" 
+                  fill="none"
+                  cx="200" cy="200" r="170"
+                  :stroke-dasharray="2 * Math.PI * 170"
+                  :stroke-dashoffset="(2 * Math.PI * 170) * (1 - F3_EAP_Success_Rate / 100)"/>
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center text-white text-6xl font-extrabold">
+                {{ F3_EAP_Success_Rate }}%
+              </div>
+            </div>
+          </div>
+
+          <!-- F5 -->
+          <div class="flex flex-col items-center w-full">
+            <h2 class="text-white text-4xl font-bold mb-6">F5</h2>
+            <div class="relative w-[400px] h-[400px] mx-auto">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 400 400">
+                <circle class="text-gray-700" stroke-width="25" stroke="currentColor" fill="none" cx="200" cy="200" r="170"/>
+                <circle 
+                  :class="{
+                    'text-red-500': F5_EAP_Success_Rate <= 60,
+                    'text-yellow-400': F5_EAP_Success_Rate > 60 && F5_EAP_Success_Rate <= 80,
+                    'text-green-400': F5_EAP_Success_Rate > 80
+                  }"
+                  stroke-width="25" 
+                  stroke-linecap="round" 
+                  stroke="currentColor" 
+                  fill="none"
+                  cx="200" cy="200" r="170"
+                  :stroke-dasharray="2 * Math.PI * 170"
+                  :stroke-dashoffset="(2 * Math.PI * 170) * (1 - F5_EAP_Success_Rate / 100)"/>
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center text-white text-6xl font-extrabold">
+                {{ F5_EAP_Success_Rate }}%
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+
+      <div v-if="showEachFloor" class="card bg-[#272727] p-6 rounded-lg shadow-lg">
+        <div v-for="([groupName, group], index) in sortedEachFloor" :key="groupName">
+          <div class="mb-4 text-white text-2xl font-bold flex justify-center">
+            {{ groupName }}
+          </div>
+  
+          <div class="grid" :style="'grid-template-columns: repeat(' + numColumns + ', 1fr); gap: 10px;'">
+            <div v-for="([floor, data], index) in Object.entries(group)" :key="floor">
+              <div class="flex flex-col items-start">
+                <div class="mb-2 text-white font-semibold text-left">{{ floor }}</div>
+              </div>
+              <!-- :class="getProgressStatus(data.Percent)" -->
+              <div class="relative h-7 w-full bg-gray-200 rounded">
+                <div 
+                  class="absolute top-0 left-0 h-full rounded"
+                  :style="{
+                    width: data.Percent + '%',  
+                    backgroundColor: getProgressStatus(data.Percent)
+                  }">
+                </div>
+  
+                <span class="floor-text absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white font-bold">
+                  {{ data.Percent }}%
+                </span>
+  
+              </div>
+  
+            </div>
+            
+          </div>
+        </div>
+      </div>
+
+
+      <div v-if="showmovein_detail" class="card bg-[#272727] p-4 rounded-lg shadow-lg w-full h-full mx-auto">
+        <div v-if="isRedirecting" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
+          <div class="text-white text-xl font-semibold">即將跳轉...</div>
+        </div>
+      </div>
+
+
+      <div v-if="showdownloadcard" class="card bg-[#272727]">
+        <!-- 選擇棟別下拉式選框 -->
+        <div class="mb-4 flex items-center">
+          <select v-model="selectedBuilding" class="bg-[#2d2d2d] text-white py-2 px-4 rounded text-sm mr-6">
+            <option value="">選擇要下載的檔案</option>
+            <option v-for="building in Object.keys(groupByBuilding)" :key="building" :value="building">
+              {{ building }}
+            </option>
+          </select>
+
+          <button 
+            @click="downloadAllFiles" 
+            class="bg-[#2d2d2d] text-white py-2 px-4 rounded text-sm">
+            下載全部CSV檔案
+          </button>
+
+        </div>
+        
+        <!-- 根据建筑和楼层分组展示文件 -->
+        <div v-for="(files, building) in filteredFiles" :key="building">
+          <div class="text-white mb-4">
+  
+            <!-- 按楼层分组展示文件 -->
+            <div v-for="(floorFiles, floor) in groupByFloor(files)" :key="floor" class="mb-4">
+              <h4 class="text-md text-white">{{ floor }}</h4>
+              <div class="grid grid-cols-8 gap-2">
+                <button
+                  v-for="(file, index) in floorFiles"
+                  :key="index"
+                  @click.prevent="downloadFile(file.file_name, file.file_path)"
+                  class="bg-[#2d2d2d] text-white py-2 px-4 rounded text-sm"
+                >
+                  {{ file.file_name }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 表格容器，四個表格在同一行上 -->
+      <div v-show="showEAP_IPcard" class="card bg-[#272727]">
+        <!-- 手動操作 v-if="groupedData.length !== 0" --> 
+        <div v-if="groupedData.length !== 0" class="custom-grid">
+          <div v-for="(table, tableIndex) in groupedData" :key="tableIndex" class="bg-[#272727] p-4 rounded-md">
+            <table class="w-full table-auto bg-black text-white">
+              <thead>
+                <tr>
+                  <th class="px-4 py-2 border-b text-white text-left">IP Address</th>                                                                                                    
+                  <th class="px-4 py-2 border-b text-white text-left">Machine ID</th>
+                  <th class="px-4 py-2 border-b text-white text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, rowIndex) in table" :key="rowIndex">
+                  <td class="px-4 py-2 border-b text-white">{{ item.ip }}</td>
+                  <!-- <td class="px-4 py-2 border-b text-white">{{ item.machine_id.slice(0, 20) }}</td> -->
+                  <td class="px-4 py-2 border-b text-white">
+                    {{ item.machine_id ? item.machine_id.slice(0, 18) : '無資料' }}
+                  </td>
+                  <td class="px-4 py-2 border-b text-white">
+                    <button class="px-1 py-0 rounded-md" 
+                      :class="{
+                        'bg-green-500': item.status === 'alive',  // 當 status 是 OK 時顯示綠色
+                        'bg-red-500': item.status === 'dead',  // 當 status 是 Fail 時顯示紅色
+                      }"
+                      @click="editStatus(item)">
+                      {{ item.status }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div> 
+        <div v-else class="absolute inset-0 flex items-center justify-center bg-[#000000] text-white text-center p-12 text-4xl flex-col">
+          <div>
+            查無資料，請重新篩選
+          </div>
+          <div class="mt-4">
+            <img 
+              src="../static/picture/reset.png" 
+              alt="Reset" 
+              class="cursor-pointer mt-4 rounded-md"
+              style="border: 2px solid lightblue;"
+              @click="resetdata" />
+          </div>
+        </div>              
+      </div>
+      <!-- 表格容器，四個表格在同一行上 -->
+
+
+      <!-- 更改卡介面 -->
+      <div v-if="isEditing" class="fixed top-0 left-0 w-full h-screen bg-opacity-50 bg-black flex justify-center items-center">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-3/4 md:w-3/4 lg:w-3/5 xl:w-3/5 h-4/5 relative flex flex-col overflow-auto">
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
+            <!-- 單列顯示的表單項目 -->
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>分配之IP:</strong></p>
+              <input v-model="currentItem.ip" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>機台編碼:</strong></p>
+              <input v-model="currentItem.machine_id" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>使用地點 (廠區/樓層):</strong></p>
+              <input v-model="currentItem.local" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>所在區域(柱位):</strong></p>
+              <input v-model="currentItem.Column_Position" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>電腦名稱 (設備名稱):</strong></p>
+              <input v-model="currentItem.device_name" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>TCP/UDP Port:</strong></p>
+              <input v-model="currentItem.tcp_port" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>COM Port:</strong></p>
+              <input v-model="currentItem.com_port" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>作業系統版本:</strong></p>
+              <input v-model="currentItem.os_spec" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>網孔編號:</strong></p>
+              <input v-model="currentItem.ip_source" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>類別:</strong></p>
+              <input v-model="currentItem.category" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>上線過帳 測試:</strong></p>
+              <input v-model="currentItem.online_test" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>修改時間:</strong></p>
+              <input v-model="currentItem.set_time" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>備註:</strong></p>
+              <input v-model="currentItem.remark" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+            <div class="flex items-center gap-4">
+              <p class="text-lg text-black w-1/2"><strong>是否為歲修PC【Y/N】:</strong></p>
+              <input v-model="currentItem.suixiu" class="text-lg text-black border p-1 rounded w-2/3" />
+            </div>
+
+          </div>
+
+          <!-- 按鈕區 -->
+          <div class="mt-auto flex justify-center gap-4">
+            <button @click="saveStatus(currentPage)" class="px-6 py-3 bg-[#0284c7] text-white rounded hover:bg-[#0284c7]">
+              更新
+            </button>
+
+            <button @click="cancelEdit" class="px-6 py-3 bg-gray-600 text-white rounded hover:bg-gray-700">
+              關閉
+            </button>
+
+            <!-- <button @click="deleteEdit" class="px-6 py-3 bg-gray-600 text-white rounded hover:bg-gray-700">
+              刪除
+            </button> -->
+          </div>
+        </div>
+      </div>
+      <!-- 更改卡介面 -->
+
+
+
+      <!-- 在中間顯示卡片，針對左方sidebar會出現的檔案名稱 -->
+      <div v-show="selectedFileFolder" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg max-w-lg w-full">
+          <div v-if="files.length > 0">
+            <ul class="mt-4">
+              <li v-for="(file, index) in files" :key="index" class="text-white mb-2">
+                <a href="#"
+                  @click.prevent="fetchAliveCardData(file)">
+                  {{ file }}
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div v-else class="text-white text-center mt-4">
+            <h3>沒有相關資料</h3>
+          </div>
+          <button @click="closePopup" class="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">Close</button>
+        </div>
+      </div> 
+      <!-- 在中間顯示卡片，針對左方sidebar會出現的檔案名稱 -->
+
+
+
+    </div>
+    <!-- mb-2區塊結束 -->
+
+
+  <!-- app 區塊 -->
+  </div>
+
+
+  <script src="../static/js/EAP_dashboard.js"></script>
+
+</body>
+</html>
+
+
+

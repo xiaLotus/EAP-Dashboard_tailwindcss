@@ -1,0 +1,87 @@
+﻿{
+    "K11-9F": {
+        "Total_local": 34,
+        "Total_local_alive": 34,
+        "Percent": "100.00"
+    },
+    "K21-8F": {
+        "Total_local": 32,
+        "Total_local_alive": 32,
+        "Percent": "100.00"
+    },
+    "K11-5F": {
+        "Total_local": 31,
+        "Total_local_alive": 31,
+        "Percent": "100.00"
+    },
+    "K25-8F": {
+        "Total_local": 28,
+        "Total_local_alive": 28,
+        "Percent": "100.00"
+    },
+    "K11-7F": {
+        "Total_local": 25,
+        "Total_local_alive": 25,
+        "Percent": "100.00"
+    },
+    "K11-8F": {
+        "Total_local": 23,
+        "Total_local_alive": 23,
+        "Percent": "100.00"
+    },
+    "K21-9F": {
+        "Total_local": 21,
+        "Total_local_alive": 21,
+        "Percent": "100.00"
+    },
+    "K21-5F": {
+        "Total_local": 19,
+        "Total_local_alive": 19,
+        "Percent": "100.00"
+    },
+    "K22-5F": {
+        "Total_local": 18,
+        "Total_local_alive": 18,
+        "Percent": "100.00"
+    },
+    "K22-8F": {
+        "Total_local": 16,
+        "Total_local_alive": 16,
+        "Percent": "100.00"
+    },
+    "K11-4F": {
+        "Total_local": 16,
+        "Total_local_alive": 16,
+        "Percent": "100.00"
+    },
+    "K11-3F": {
+        "Total_local": 15,
+        "Total_local_alive": 15,
+        "Percent": "100.00"
+    },
+    "K11-6F": {
+        "Total_local": 15,
+        "Total_local_alive": 10,
+        "Percent": "60.36"
+    },
+    "K11-10F": {
+        "Total_local": 11,
+        "Total_local_alive": 11,
+        "Percent": "100.00"
+    },
+    "K25-9F": {
+        "Total_local": 11,
+        "Total_local_alive": 11,
+        "Percent": "100.00"
+    },
+    "K22-9F": {
+        "Total_local": 10,
+        "Total_local_alive": 10,
+        "Percent": "100.00"
+    },
+    "K18-9F": {
+        "Total_local": 4,
+        "Total_local_alive": 4,
+        "Percent": "100.00"
+    }
+}

@@ -1,0 +1,19 @@
+2025-09-01 10:15:13,117 INFO: ✅ \\20220530-w03\Data\EAP_Health_level\source\K11\9F\K11-9F 區網(76).csv - 檔案存在，可以讀取！
+2025-09-01 10:15:56,956 INFO: 📊 成功 Ping 數: 69 / 255 (27.06%)
+2025-09-01 10:15:56,957 INFO: 🎯 符合格式且成功 Ping: 28 / 32 (87.50%)
+2025-09-01 10:15:57,009 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EAP.csv，排除重複的 File_Place：K11-9F 區網(76).csv
+2025-09-01 10:15:57,174 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EQP.csv，排除重複的 File_Place：K11-9F 區網(76).csv
+2025-09-01 10:15:57,245 INFO: ✅ 已更新 IP loss 計數檔案：\\20220530-w03\Data\EAP_Health_level\error_data\Daily_error\error_lose_ipcount_20250901.json
+2025-09-01 10:15:57,250 INFO: ✅ \\20220530-w03\Data\EAP_Health_level\source\K11\9F\K11-9F 區網(77).csv - 檔案存在，可以讀取！
+2025-09-01 10:16:38,932 INFO: 📊 成功 Ping 數: 81 / 255 (31.76%)
+2025-09-01 10:16:38,934 INFO: 🎯 符合格式且成功 Ping: 7 / 7 (100.00%)
+2025-09-01 10:16:39,053 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EAP.csv，排除重複的 File_Place：K11-9F 區網(77).csv
+2025-09-01 10:16:39,335 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EQP.csv，排除重複的 File_Place：K11-9F 區網(77).csv
+2025-09-01 10:16:39,388 INFO: ✅ 已更新 IP loss 計數檔案：\\20220530-w03\Data\EAP_Health_level\error_data\Daily_error\error_lose_ipcount_20250901.json
+2025-09-01 10:16:39,393 INFO: ✅ \\20220530-w03\Data\EAP_Health_level\source\K11\9F\K11-9F 區網(78).csv - 檔案存在，可以讀取！
+2025-09-01 10:17:19,442 INFO: 📊 成功 Ping 數: 60 / 255 (23.53%)
+2025-09-01 10:17:19,444 INFO: 🎯 符合格式且成功 Ping: 8 / 10 (80.00%)
+2025-09-01 10:17:19,492 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EAP.csv，排除重複的 File_Place：K11-9F 區網(78).csv
+2025-09-01 10:17:19,676 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EQP.csv，排除重複的 File_Place：K11-9F 區網(78).csv
+2025-09-01 10:17:19,761 INFO: ✅ 已更新 IP loss 計數檔案：\\20220530-w03\Data\EAP_Health_level\error_data\Daily_error\error_lose_ipcount_20250901.json
+2025-09-01 10:17:19,763 INFO: ✅ 任務完成，耗時 126.65 秒

@@ -1,0 +1,13 @@
+2025-09-01 10:20:11,400 INFO: ✅ \\20220530-w03\Data\EAP_Health_level\source\K11\10F\K11-10F 區網(83).csv - 檔案存在，可以讀取！
+2025-09-01 10:20:56,432 INFO: 📊 成功 Ping 數: 31 / 255 (12.16%)
+2025-09-01 10:20:56,433 INFO: 🎯 符合格式且成功 Ping: 7 / 10 (70.00%)
+2025-09-01 10:20:56,488 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EAP.csv，排除重複的 File_Place：K11-10F 區網(83).csv
+2025-09-01 10:20:56,663 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EQP.csv，排除重複的 File_Place：K11-10F 區網(83).csv
+2025-09-01 10:20:56,726 INFO: ✅ 已更新 IP loss 計數檔案：\\20220530-w03\Data\EAP_Health_level\error_data\Daily_error\error_lose_ipcount_20250901.json
+2025-09-01 10:20:56,731 INFO: ✅ \\20220530-w03\Data\EAP_Health_level\source\K11\10F\K11-10F 區網(84).csv - 檔案存在，可以讀取！
+2025-09-01 10:21:21,456 INFO: 📊 成功 Ping 數: 138 / 255 (54.12%)
+2025-09-01 10:21:21,459 INFO: 🎯 符合格式且成功 Ping: 7 / 7 (100.00%)
+2025-09-01 10:21:21,508 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EAP.csv，排除重複的 File_Place：K11-10F 區網(84).csv
+2025-09-01 10:21:21,680 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EQP.csv，排除重複的 File_Place：K11-10F 區網(84).csv
+2025-09-01 10:21:21,750 INFO: ✅ 已更新 IP loss 計數檔案：\\20220530-w03\Data\EAP_Health_level\error_data\Daily_error\error_lose_ipcount_20250901.json
+2025-09-01 10:21:21,752 INFO: ✅ 任務完成，耗時 70.36 秒

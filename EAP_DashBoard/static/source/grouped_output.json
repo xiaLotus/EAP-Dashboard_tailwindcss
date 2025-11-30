@@ -1,0 +1,27 @@
+﻿{
+    "歲修": {
+        "ip_len": "330 / 330",
+        "ip_use_percent": "100.00",
+        "ping_device": "330 / 330",
+        "ping_device_percent": "100.00",
+        "eqp_len": "0",
+        "eqp_len_percent": "0.00",
+        "switch_len": "0",
+        "switch_len_percent": "0.00"
+    },
+    "F3": {
+        "Total_local": 209,
+        "Total_local_alive": 209,
+        "Percent": "100.00"
+    },
+    "F1": {
+        "Total_local": 116,
+        "Total_local_alive": 116,
+        "Percent": "100.00"
+    },
+    "F5": {
+        "Total_local": 4,
+        "Total_local_alive": 4,
+        "Percent": "100.00"
+    }
+}

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>EAP 總表</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="static/js/tailwindcss.js"></script>
+    <script src="static/js/vue.global.js"></script>
+
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="static/css/front.css"
+    />
+      <style>
+        .flip-digit {
+          background: #111;
+          color: white;
+          font-size: 2rem;
+          padding: 0.5rem 1rem;
+          border-radius: 0.25rem;
+          font-family: 'Courier New', Courier, monospace;
+          box-shadow: 0 4px 0 #0004;
+          display: inline-block;
+          margin: 0 0.25rem;
+          width: 2rem;
+          text-align: center;
+        }
+
+        @keyframes spin-once {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .spin-once {
+          animation: spin-once 0.8s linear;
+        }
+    </style>
+  </head>
+  <body class="bg-[#141b1f] text-white min-h-screen" style='font-family: Inter, "Noto Sans", sans-serif;'>
+
+    <div id="app" class="flex flex-col min-h-screen">
+      
+      <!-- Header 導覽列 -->
+      <header class="flex justify-between items-center border-b border-[#2b3840] px-6 py-0.5">
+        <!-- 左側連結 -->
+        <div class="flex gap-9">
+          <a class="text-sm font-medium hover:text-blue-400" href="frontend/login.html">Dashboard</a>
+          <a class="text-sm font-medium hover:text-blue-400" href="#">Settings</a>
+        </div>
+
+        <!-- 右側時間倒數 -->
+        <div class="flex items-center space-x-1">
+          <div class="bg-black text-white text-4xl font-mono rounded-md px-4 py-2 shadow-md w-[4.5rem] text-center">
+            {{ minutes }}
+          </div>
+          <div class="text-3xl font-bold text-white">:</div>
+          <div class="bg-black text-white text-4xl font-mono rounded-md px-4 py-2 shadow-md w-[4.5rem] text-center">
+            {{ seconds }}
+          </div>
+        </div>
+      </header>
+
+
+      <!-- 主內容區域：左右分欄 -->
+        <main class="flex flex-col lg:flex-row flex-wrap gap-4 p-4 min-h-[calc(100vh-64px)]">
+            <!-- 左／上 -->
+            <section class="w-full lg:w-[calc(50%-0.5rem)] h-[100vh] lg:h-auto bg-[#1f2a30] p-6 rounded-lg shadow-md overflow-auto">
+              <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Loss（每 10 分鐘更新）</h2>
+                
+                <!-- 整組靠右 -->
+                <div class="ml-auto flex items-center gap-2">
+                  <button @click="setSource('EAP')"
+                          class="px-3 py-1 rounded text-white border-2"
+                          :class="currentSource==='EAP' 
+                            ? 'bg-blue-700 border-red-500 border-4' 
+                            : 'bg-blue-500 hover:bg-blue-600 border-transparent'">EAP</button>
+
+                  <button @click="setSource('EQP')"
+                          class="px-3 py-1 rounded text-white border-2"
+                          :class="currentSource==='EQP' 
+                            ? 'bg-green-700 border-red-500 border-4' 
+                            : 'bg-green-500 hover:bg-green-600 border-transparent'">EQP</button>
+
+                  <button @click="setSource('Switch')"
+                          class="px-3 py-1 rounded text-black border-2"
+                          :class="currentSource==='Switch' 
+                            ? 'bg-yellow-600 border-red-500 border-4' 
+                            : 'bg-yellow-400 hover:bg-yellow-500 border-transparent'">Switch</button>
+
+                  <button @click="handleRefresh" 
+                          class="p-1 rounded hover:opacity-80 transition">
+                    <img :class="{ 'animate-spin': isRefreshing }" 
+                        src="static/picture/undo.png" 
+                        alt="Refresh" 
+                        class="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+                <!-- 固定高度 + 可捲動 -->
+                <div ref="listWrap" class="max-h-[950px] overflow-auto border-t border-[#3d505c]">
+                  <!-- 總高度占位容器 -->
+                  <div :style="{height: totalHeight + 'px', position:'relative'}">
+                    <!-- 只渲染當前可視範圍 -->
+                    <div :style="{transform:'translateY(' + offsetY + 'px)'}">
+                      <div v-for="item in visibleRows" :key="item.__rowKey"
+                          class="grid hover:bg-[#2e3b44] transition-colors"
+                          :style="gridTemplate"
+                          :style2="{height: rowHeight + 'px'}">
+                        <div v-for="h in headers" :key="h.key" class="px-4 py-2">
+                          {{ item[h.key] }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 無資料時顯示提示 -->
+                  <div v-if="sortedRows.length === 0" class="p-6 text-center text-gray-400">
+                    ⚠️ 無資料
+                  </div>
+                </div>
+
+            </section>
+
+
+            <!-- 右／下 -->
+            <section class="w-full lg:w-[calc(50%-0.5rem)] h-[100vh] lg:h-auto bg-[#2e3b44] p-6 rounded-lg shadow-md overflow-auto">
+              <div class="mb-4">
+                <div class="mb-4 flex items-center justify-between">
+                  <label class="text-sm font-semibold">本日Loss 選擇區網：</label>
+                  <select v-model="selectedGroup" class="bg-gray-800 text-white px-3 py-2 rounded border border-gray-600">
+                    <option value="all">全部</option>
+                    <option v-for="item in groupedData" :key="item.name" :value="item.name">
+                      {{ formatGroupName(item.name) }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- 渲染右邊區塊 --> 
+                <div v-for="item in filteredGroups" :key="item.name" class="mb-6">
+                  <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm text-white table-auto border-collapse bg-[#1f2a30] rounded shadow-md">
+                      <thead class="bg-[#2b3840]">
+                        <tr>
+                          <th class="px-4 py-2 text-left font-semibold border-b border-[#3d505c]">machine_ID</th>
+                          <th class="px-4 py-2 text-left font-semibold border-b border-[#3d505c]">IP</th>
+                          <th class="px-4 py-2 text-left font-semibold border-b border-[#3d505c]">Loss 次數</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="device in item.devices" :key="device.name" class="hover:bg-[#2e3b44] transition">
+                          <td class="px-4 py-2">{{ device.name }}</td>
+                          <td class="px-4 py-2">{{ device.ip }}</td>
+                          <td class="px-4 py-2">{{ device.count }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+            </section>
+
+        </main>
+    </div>
+    <script src="static/js/summary.js"></script>
+  </body>
+</html>

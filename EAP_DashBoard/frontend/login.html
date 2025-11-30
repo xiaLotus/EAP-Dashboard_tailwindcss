@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Index Page</title>
+    <script src="../static/js/vue.global.js"></script>
+    <script src="../static/js/tailwindcss.js"></script>
+    <script src="../static/js/axios.min.js"></script>
+    <style>
+      html,
+      body {
+        font-family: "Inter", sans-serif;
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: linear-gradient(
+          135deg,
+          #f8fafc 0%,
+          #e2e8f0 25%,
+          #cbd5e1 50%,
+          #94a3b8 75%,
+          #64748b 100%
+        );
+        overflow: hidden;
+      }
+
+      /* 漂浮電腦符號動畫 */
+      .floating-icon {
+        position: absolute;
+        color: rgba(100, 116, 139, 0.15);
+        animation: float linear infinite;
+        font-size: 2rem;
+        user-select: none;
+        pointer-events: none;
+      }
+
+      @keyframes float {
+        0% {
+          transform: translateY(100vh) rotate(0deg);
+          opacity: 0;
+        }
+        5% {
+          opacity: 1;
+        }
+        95% {
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-100px) rotate(360deg);
+          opacity: 0;
+        }
+      }
+    </style></head
+  >`
+  <body>
+    <div id="app">
+      <div
+        class="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+      >
+        <!-- 漂浮電腦符號背景 -->
+        <div class="absolute inset-0 overflow-hidden z-0">
+          <div
+            v-for="n in 15"
+            :key="n"
+            class="floating-icon"
+            :style="generateIconStyle()"
+            v-html="getRandomIcon()"
+          ></div>
+        </div>
+
+        <!-- 登入表單 -->
+        <div
+          class="bg-white bg-opacity-90 p-8 rounded-lg shadow-xl w-full max-w-md relative z-10 border border-gray-200"
+        >
+          <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">
+            EAP健康度 - 登入頁面
+          </h1>
+          <form @submit.prevent="login" class="space-y-6">
+            <!-- 帳號 -->
+            <div class="flex items-center">
+              <label
+                for="username"
+                class="w-16 text-sm font-medium text-gray-700"
+                >帳號</label
+              >
+              <input
+                type="text"
+                id="username"
+                v-model="username"
+                required
+                class="flex-1 px-4 py-3 bg-gray-50 text-gray-900 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm placeholder-gray-400 border border-gray-300"
+                placeholder="請輸入帳號"
+              />
+            </div>
+
+            <!-- 密碼 -->
+            <div class="flex items-center">
+              <label
+                for="password"
+                class="w-16 text-sm font-medium text-gray-700"
+                >密碼</label
+              >
+              <input
+                type="password"
+                id="password"
+                v-model="password"
+                required
+                class="flex-1 px-4 py-3 bg-gray-50 text-gray-900 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm placeholder-gray-400 border border-gray-300"
+                placeholder="請輸入密碼"
+              />
+            </div>
+
+            <!-- 按鈕 -->
+            <button
+              type="submit"
+              class="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-md"
+            >
+              登入
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="absolute bottom-4 w-full text-center text-gray-600 text-sm">
+        Made By RuiYing 2024 - {{ this.currentYear }} ©
+      </div>
+    </div>
+
+    <script>
+      const app = Vue.createApp({
+        data() {
+          return {
+            username: "",
+            password: "",
+            // 設置當前年份
+            currentYear: new Date().getFullYear(),
+            // 電腦相關符號
+            computerIcons: [
+              "💻",
+              "🖥️",
+              "⌨️",
+              "🖱️",
+              "💾",
+              "📱",
+              "🔌",
+              "💡",
+              "⚡",
+              "🔧",
+              "⚙️",
+              "📊",
+              "📈",
+              "🌐",
+              "🔒",
+            ],
+          };
+        },
+
+        methods: {
+          async login() {
+            console.log("帳號:", this.username);
+            console.log("密碼:", this.password);
+
+            // 使用 axios 發送 POST 請求到後端進行驗證
+            axios
+              .post("http://127.0.0.1:5000/api/login", {
+                username: this.username,
+                password: this.password,
+              })
+              .then((response) => {
+                // 假設後端返回的 response.data 包含驗證結果
+                if (response.data.success) {
+                  // 驗證成功，跳轉到 difficult.html，並附帶帳號參數
+                  // 模擬一個延遲來顯示 loading 畫面
+                  setTimeout(() => {
+                    localStorage.setItem("username", this.username);
+                    window.location.href = "EAP_Dashboard.html"; // 頁面跳轉
+                  }, 300); // 延遲 0.3 秒跳轉
+                } else {
+                  // 如果驗證失敗，顯示錯誤訊息
+                  alert("帳號或密碼錯誤");
+                  this.account = "";
+                  this.password = "";
+                }
+              })
+              .catch((error) => {
+                console.error("驗證錯誤:", error);
+                alert("發生錯誤，請稍後再試");
+              });
+          },
+
+          generateIconStyle() {
+            // 符號大小
+            const size = Math.random() * 1.5 + 1;
+            // 隨機水平位置
+            const left = Math.random() * 100;
+            // 漂浮速度
+            const duration = Math.random() * 15 + 10;
+            // 開始延遲 - 讓符號在不同時間開始，避免一開始都在頂部
+            const delay = Math.random() * duration;
+            // 初始位置 - 讓符號從不同的垂直位置開始
+            const initialY = Math.random() * 120 + 100; // 100vh 到 220vh 之間
+
+            return {
+              left: `${left}%`,
+              fontSize: `${size}rem`,
+              animationDuration: `${duration}s`,
+              animationDelay: `-${delay}s`, // 負延遲讓動畫立即開始但在不同階段
+              transform: `translateY(${initialY}vh)`,
+            };
+          },
+
+          getRandomIcon() {
+            return this.computerIcons[
+              Math.floor(Math.random() * this.computerIcons.length)
+            ];
+          },
+        },
+      });
+
+      app.mount("#app");
+    </script>
+  </body>
+</html>

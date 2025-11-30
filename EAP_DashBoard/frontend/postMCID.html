@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FT01 歲修過帳率圖表</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #fefbf3 0%, #f7f3e9 50%, #f1ede4 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        html, body {
+            overflow: hidden;
+            height: 100%;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(230, 230, 230, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        
+        .slide-up {
+            animation: slideUp 0.6s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .progress-bar-container {
+            background: linear-gradient(90deg, #e5e7eb 0%, #d1d5db 100%);
+            border-radius: 9999px;
+            height: 1.75rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .progress-red {
+            background: linear-gradient(135deg, #fca5a5 0%, #f87171 50%, #dc2626 100%);
+        }
+        
+        .progress-yellow {
+            background: linear-gradient(135deg, #fde047 0%, #fbbf24 50%, #d97706 100%);
+        }
+        
+        .progress-green {
+            background: linear-gradient(135deg, #6ee7b7 0%, #34d399 50%, #059669 100%);
+        }
+        
+        .progress-text-outside {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        /* 進度條文字顏色 - 根據進度調整 */
+        .progress-text-light {
+            color: #ffffff;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+        
+        .progress-text-dark {
+            color: #4b5563;
+            text-shadow: none;
+            font-weight: 600;
+        }
+
+        /* 完成數量樣式 */
+        .count-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .count-display .completed {
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .count-display .total {
+            color: #9ca3af;
+        }
+        
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .tab-btn.active {
+            transform: scale(1);
+        }
+
+        /* 進度項目網格 - 填滿版面 */
+        .progress-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 0.75rem;
+        }
+
+        @media (max-width: 1400px) {
+            .progress-grid {
+                grid-template-columns: repeat(8, 1fr);
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .progress-grid {
+                grid-template-columns: repeat(6, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .progress-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .progress-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        /* 進度卡片美化 */
+        .progress-item {
+            background: linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.9) 100%);
+            border: 1px solid rgba(200, 200, 200, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #e2e8f0, #cbd5e1);
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.has-progress::before {
+            background: linear-gradient(90deg, #34d399, #059669);
+        }
+
+        .progress-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border-color: rgba(150, 150, 150, 0.4);
+        }
+
+        .progress-item:hover::before {
+            height: 4px;
+        }
+
+        /* 分類標題樣式 */
+        .category-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.375rem;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .category-title .category-icon {
+            width: 14px;
+            height: 14px;
+            color: #9ca3af;
+        }
+
+        .progress-item:hover .category-icon {
+            color: #f59e0b;
+        }
+
+        .progress-item {
+            transition: all 0.2s ease;
+        }
+
+        .progress-item:hover {
+            transform: translateY(-2px);
+        }
+
+        /* 圓形進度條動畫 */
+        .progress-circle {
+            transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Vue 過渡動畫 */
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+            transform: translateY(15px);
+        }
+    </style>
+</head>
+<body class="gradient-bg text-gray-800">
+    <div id="app" class="h-screen p-3 flex flex-col overflow-hidden">
+        
+        <!-- 左上角返回按鈕 -->
+        <div class="fixed top-3 left-3 z-50">
+            <button @click="goToLab" 
+                    class="flex items-center gap-2 px-3 py-1.5 glass-card rounded-xl hover:bg-white/80 transition-all duration-300 transform hover:scale-105 shadow-lg text-gray-700 font-medium text-sm">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                <span class="hidden md:inline">EAP存活率總表</span>
+            </button>
+        </div>
+
+        <!-- 右上角按鈕 -->
+        <div class="fixed top-3 right-3 z-50 flex gap-2">
+            <button @click="loadData" 
+                    :disabled="loading"
+                    class="flex items-center gap-2 px-3 py-1.5 glass-card rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg text-gray-700 font-medium text-sm"
+                    :class="{
+                        'hover:bg-white/80 cursor-pointer': !loading,
+                        'opacity-75 cursor-not-allowed': loading
+                    }">
+                <i data-lucide="refresh-cw" :class="{'animate-spin': loading}" class="w-4 h-4"></i>
+                <span class="hidden md:inline">{{ loading ? '載入中...' : '重新載入' }}</span>
+            </button>
+            <button @click="goToEdit" 
+                    class="flex items-center gap-2 px-3 py-1.5 glass-card rounded-xl hover:bg-white/80 transition-all duration-300 transform hover:scale-105 shadow-lg text-gray-700 font-medium text-sm">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                <span class="hidden md:inline">MCID確認</span>
+            </button>
+        </div>
+
+        <!-- 標題區域 -->
+        <div class="text-center mb-3 pt-10 fade-in flex-shrink-0">
+            <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-amber-600 via-orange-500 to-red-500 bg-clip-text text-transparent mb-1">
+                歲修過帳率圖表
+            </h1>
+            <p class="text-sm text-gray-600">各站點進度統計</p>
+            <div class="w-16 h-1 bg-gradient-to-r from-amber-500 to-orange-500 mx-auto mt-2 rounded-full"></div>
+        </div>
+
+        <!-- 載入狀態 -->
+        <div v-if="loading" class="flex flex-col items-center justify-center flex-1 text-gray-600">
+            <div class="loading-spinner w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full mb-3"></div>
+            <div class="text-lg">載入中...</div>
+        </div>
+
+        <!-- 錯誤狀態 -->
+        <div v-else-if="error" class="flex flex-col items-center justify-center flex-1 gap-3">
+            <div class="text-5xl mb-2">⚠️</div>
+            <div class="text-red-600 text-lg text-center">{{ error }}</div>
+            <button @click="loadData" class="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all duration-300 transform hover:scale-105 shadow-lg text-sm">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i> 重新載入
+            </button>
+        </div>
+
+        <!-- 主要內容 -->
+        <template v-else>
+            
+            <!-- 統計摘要卡片 -->
+            <div v-if="activeTab !== 'all'" class="glass-card rounded-xl p-2.5 mb-3 fade-in flex-shrink-0">
+                <div class="flex flex-wrap items-center justify-center gap-4 text-center text-sm">
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="folder" class="w-4 h-4 text-amber-600"></i>
+                        <span class="text-gray-600">分類數：</span>
+                        <span class="font-bold text-gray-800">{{ currentStats.categories }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="check-circle-2" class="w-4 h-4 text-green-600"></i>
+                        <span class="text-gray-600">已完成：</span>
+                        <span class="font-bold text-green-600">{{ currentStats.vCount }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="list" class="w-4 h-4 text-blue-600"></i>
+                        <span class="text-gray-600">總項目：</span>
+                        <span class="font-bold text-gray-800">{{ currentStats.totalCount }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="percent" class="w-4 h-4 text-purple-600"></i>
+                        <span class="text-gray-600">完成率：</span>
+                        <span class="font-bold" :class="getPercentageTextColor(currentStats.percentage)">
+                            {{ currentStats.percentage }}%
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 樓層切換按鈕 -->
+            <div class="flex justify-center gap-2 mb-3 fade-in flex-shrink-0">
+                <button 
+                    @click="switchTab('asef1')"
+                    :disabled="tabLoading"
+                    class="tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-sm shadow-lg border-2 transition-all duration-300"
+                    :class="activeTab === 'asef1' 
+                        ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-400 active' 
+                        : 'glass-card text-gray-700 border-transparent hover:border-blue-300'">
+                    <i data-lucide="building" class="w-4 h-4"></i>
+                    ASEF1
+                    <span class="bg-white/30 px-1.5 py-0.5 rounded-lg text-xs">{{ totalAsef1Percentage }}%</span>
+                </button>
+
+                <button 
+                    @click="switchTab('asef3')"
+                    :disabled="tabLoading"
+                    class="tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-sm shadow-lg border-2 transition-all duration-300"
+                    :class="activeTab === 'asef3' 
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-400 active' 
+                        : 'glass-card text-gray-700 border-transparent hover:border-purple-300'">
+                    <i data-lucide="building-2" class="w-4 h-4"></i>
+                    ASEF3
+                    <span class="bg-white/30 px-1.5 py-0.5 rounded-lg text-xs">{{ totalAsef3Percentage }}%</span>
+                </button>
+
+                <button 
+                    @click="switchTab('asef5')"
+                    :disabled="tabLoading"
+                    class="tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-sm shadow-lg border-2 transition-all duration-300"
+                    :class="activeTab === 'asef5' 
+                        ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400 active' 
+                        : 'glass-card text-gray-700 border-transparent hover:border-emerald-300'">
+                    <i data-lucide="factory" class="w-4 h-4"></i>
+                    ASEF5
+                    <span class="bg-white/30 px-1.5 py-0.5 rounded-lg text-xs">{{ totalAsef5Percentage }}%</span>
+                </button>
+
+                <button 
+                    @click="switchTab('all')"
+                    :disabled="tabLoading"
+                    class="tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-sm shadow-lg border-2 transition-all duration-300"
+                    :class="activeTab === 'all' 
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-400 active' 
+                        : 'glass-card text-gray-700 border-transparent hover:border-amber-300'">
+                    <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                    全部總覽
+                    <span class="bg-white/30 px-1.5 py-0.5 rounded-lg text-xs">{{ overallStats.percentage }}%</span>
+                </button>
+            </div>
+
+            <!-- 頁籤切換 Loading -->
+            <transition name="fade" mode="out-in">
+                <div v-if="tabLoading" key="tab-loading" class="glass-card rounded-xl p-4 flex-1 flex flex-col items-center justify-center">
+                    <div class="loading-spinner w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full mb-3"></div>
+                    <div class="text-gray-600">載入中...</div>
+                </div>
+
+                <!-- ASEF1 內容 -->
+                <div v-else-if="activeTab === 'asef1'" key="asef1" class="glass-card rounded-xl p-4 slide-up flex-1 overflow-auto">
+                    <div class="progress-grid">
+                        <div v-for="(categoryData, category) in processedAsef1Data" :key="category"
+                             class="progress-item rounded-xl p-3 card-hover"
+                             :class="{ 'has-progress': categoryData.percentage > 0 }">
+                            
+                            <div class="category-title">
+                                <i data-lucide="box" class="category-icon"></i>
+                                <span class="text-sm truncate" :title="category">{{ category }}</span>
+                            </div>
+
+                            <div class="progress-bar-container">
+                                <div class="progress-fill"
+                                     :class="getProgressColorClass(categoryData.percentage)"
+                                     :style="{ width: categoryData.percentage + '%' }">
+                                </div>
+                                <div class="progress-text-outside"
+                                     :class="categoryData.percentage > 35 ? 'progress-text-light' : 'progress-text-dark'">
+                                    {{ categoryData.percentage }}%
+                                </div>
+                            </div>
+
+                            <div class="count-display">
+                                <span class="completed">{{ categoryData.v_count }}</span>
+                                <span class="total">/ {{ categoryData.total_count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ASEF3 內容 -->
+                <div v-else-if="activeTab === 'asef3'" key="asef3" class="glass-card rounded-xl p-4 slide-up flex-1 overflow-auto">
+                    <div class="progress-grid">
+                        <div v-for="(categoryData, category) in processedAsef3Data" :key="category"
+                             class="progress-item rounded-xl p-3 card-hover"
+                             :class="{ 'has-progress': categoryData.percentage > 0 }">
+                            
+                            <div class="category-title">
+                                <i data-lucide="box" class="category-icon"></i>
+                                <span class="text-sm truncate" :title="category">{{ category }}</span>
+                            </div>
+
+                            <div class="progress-bar-container">
+                                <div class="progress-fill"
+                                     :class="getProgressColorClass(categoryData.percentage)"
+                                     :style="{ width: categoryData.percentage + '%' }">
+                                </div>
+                                <div class="progress-text-outside"
+                                     :class="categoryData.percentage > 35 ? 'progress-text-light' : 'progress-text-dark'">
+                                    {{ categoryData.percentage }}%
+                                </div>
+                            </div>
+
+                            <div class="count-display">
+                                <span class="completed">{{ categoryData.v_count }}</span>
+                                <span class="total">/ {{ categoryData.total_count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ASEF5 內容 -->
+                <div v-else-if="activeTab === 'asef5'" key="asef5" class="glass-card rounded-xl p-4 slide-up flex-1 overflow-auto">
+                    <div v-if="Object.keys(processedAsef5Data).length > 0" class="progress-grid">
+                        <div v-for="(categoryData, category) in processedAsef5Data" :key="category"
+                             class="progress-item rounded-xl p-3 card-hover"
+                             :class="{ 'has-progress': categoryData.percentage > 0 }">
+                            
+                            <div class="category-title">
+                                <i data-lucide="box" class="category-icon"></i>
+                                <span class="text-sm truncate" :title="category">{{ category }}</span>
+                            </div>
+
+                            <div class="progress-bar-container">
+                                <div class="progress-fill"
+                                     :class="getProgressColorClass(categoryData.percentage)"
+                                     :style="{ width: categoryData.percentage + '%' }">
+                                </div>
+                                <div class="progress-text-outside"
+                                     :class="categoryData.percentage > 35 ? 'progress-text-light' : 'progress-text-dark'">
+                                    {{ categoryData.percentage }}%
+                                </div>
+                            </div>
+
+                            <div class="count-display">
+                                <span class="completed">{{ categoryData.v_count }}</span>
+                                <span class="total">/ {{ categoryData.total_count }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 無資料提示 -->
+                    <div v-else class="text-center py-8 text-gray-500">
+                        <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3 text-gray-400"></i>
+                        <p class="text-base">暫無 ASEF5 資料</p>
+                    </div>
+                </div>
+
+                <!-- 全部總覽 - 圓形進度圖 -->
+                <div v-else-if="activeTab === 'all'" key="all" class="glass-card rounded-xl p-6 slide-up flex-1 flex items-center justify-center">
+                    <div class="grid grid-cols-4 gap-8 w-full max-w-6xl">
+                        
+                        <!-- ASEF1 圓形進度 -->
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="relative w-48 h-48 lg:w-56 lg:h-56">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                                    <circle class="text-gray-200" stroke-width="14" stroke="currentColor" fill="none" cx="100" cy="100" r="85"/>
+                                    <circle 
+                                        class="progress-circle text-blue-500"
+                                        stroke-width="14" 
+                                        stroke-linecap="round" 
+                                        stroke="currentColor" 
+                                        fill="none"
+                                        cx="100" cy="100" r="85"
+                                        :stroke-dasharray="2 * Math.PI * 85"
+                                        :stroke-dashoffset="(2 * Math.PI * 85) * (1 - totalAsef1Percentage / 100)"/>
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <div class="text-4xl lg:text-5xl font-black text-gray-800">{{ totalAsef1Percentage }}%</div>
+                                </div>
+                            </div>
+                            <div class="mt-4 text-center">
+                                <div class="text-xl lg:text-2xl font-bold text-blue-600">ASEF1</div>
+                                <div class="text-base lg:text-lg text-gray-500">{{ totalAsef1VCount }} / {{ totalAsef1Count }}</div>
+                            </div>
+                        </div>
+
+                        <!-- ASEF3 圓形進度 -->
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="relative w-48 h-48 lg:w-56 lg:h-56">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                                    <circle class="text-gray-200" stroke-width="14" stroke="currentColor" fill="none" cx="100" cy="100" r="85"/>
+                                    <circle 
+                                        class="progress-circle text-purple-500"
+                                        stroke-width="14" 
+                                        stroke-linecap="round" 
+                                        stroke="currentColor" 
+                                        fill="none"
+                                        cx="100" cy="100" r="85"
+                                        :stroke-dasharray="2 * Math.PI * 85"
+                                        :stroke-dashoffset="(2 * Math.PI * 85) * (1 - totalAsef3Percentage / 100)"/>
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <div class="text-4xl lg:text-5xl font-black text-gray-800">{{ totalAsef3Percentage }}%</div>
+                                </div>
+                            </div>
+                            <div class="mt-4 text-center">
+                                <div class="text-xl lg:text-2xl font-bold text-purple-600">ASEF3</div>
+                                <div class="text-base lg:text-lg text-gray-500">{{ totalAsef3VCount }} / {{ totalAsef3Count }}</div>
+                            </div>
+                        </div>
+
+                        <!-- ASEF5 圓形進度 -->
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="relative w-48 h-48 lg:w-56 lg:h-56">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                                    <circle class="text-gray-200" stroke-width="14" stroke="currentColor" fill="none" cx="100" cy="100" r="85"/>
+                                    <circle 
+                                        class="progress-circle text-emerald-500"
+                                        stroke-width="14" 
+                                        stroke-linecap="round" 
+                                        stroke="currentColor" 
+                                        fill="none"
+                                        cx="100" cy="100" r="85"
+                                        :stroke-dasharray="2 * Math.PI * 85"
+                                        :stroke-dashoffset="(2 * Math.PI * 85) * (1 - totalAsef5Percentage / 100)"/>
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <div class="text-4xl lg:text-5xl font-black text-gray-800">{{ totalAsef5Percentage }}%</div>
+                                </div>
+                            </div>
+                            <div class="mt-4 text-center">
+                                <div class="text-xl lg:text-2xl font-bold text-emerald-600">ASEF5</div>
+                                <div class="text-base lg:text-lg text-gray-500">{{ totalAsef5VCount }} / {{ totalAsef5Count }}</div>
+                            </div>
+                        </div>
+
+                        <!-- 總計 圓形進度 -->
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="relative w-48 h-48 lg:w-56 lg:h-56">
+                                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                                    <circle class="text-gray-200" stroke-width="14" stroke="currentColor" fill="none" cx="100" cy="100" r="85"/>
+                                    <circle 
+                                        class="progress-circle text-amber-500"
+                                        stroke-width="14" 
+                                        stroke-linecap="round" 
+                                        stroke="currentColor" 
+                                        fill="none"
+                                        cx="100" cy="100" r="85"
+                                        :stroke-dasharray="2 * Math.PI * 85"
+                                        :stroke-dashoffset="(2 * Math.PI * 85) * (1 - overallStats.percentage / 100)"/>
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <div class="text-4xl lg:text-5xl font-black text-gray-800">{{ overallStats.percentage }}%</div>
+                                </div>
+                            </div>
+                            <div class="mt-4 text-center">
+                                <div class="text-xl lg:text-2xl font-bold text-amber-600">總計</div>
+                                <div class="text-base lg:text-lg text-gray-500">{{ overallStats.vCount }} / {{ overallStats.totalCount }}</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </transition>
+
+        </template>
+
+    </div>
+
+    <!-- 引用共用的 post.js -->
+    <script src="../static/js/post.js"></script>
+</body>
+</html>

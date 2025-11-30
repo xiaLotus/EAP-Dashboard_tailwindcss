@@ -1,0 +1,123 @@
+body {
+    background: linear-gradient(135deg, #0f0f0f, #2c2c2c);
+  }
+  
+  .card {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.7)); /* Dark gradient */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    border-radius: 12px;
+    padding: 20px;
+    color: white;
+  }
+  
+  .table th, .table td {
+    color: white;
+    border: 1px solid #444444;
+    padding: 12px;
+  }
+  
+  .table th {
+    background-color: #333333;
+  }
+  
+  .table tbody tr {
+    background-color: #222222;
+  }
+  
+  .table tr:hover {
+    background-color: #444444;
+  }
+  
+  .header-text {
+    color: white;
+  }
+  
+  
+  .custom-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 30%);
+    /* grid-template-columns: calc(30% - 10px) calc(30% - 10px) calc(30% - 10px); 每個列 30%，並從每列寬度中減去剩餘的間隙 */
+    gap: calc(10% / 2);  /* 或者您希望的其他間距 */
+  }
+  
+  
+  .btn {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 10px;
+    border-radius: 50%;
+    font-size: 24px;
+    border: none;
+    transition: all 0.3s;
+  }
+  
+  .btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+  
+  .btn:focus {
+    outline: none;
+  }
+  
+  .header-text {
+    color: white;
+  }
+  
+  .circle{
+    position: relative;
+    border-radius: 50%;
+    border: 12px solid;
+    border-color: green green transparent green;
+    width: 600px;
+    height: 600px;
+    top: 4%;
+    left: 12%;
+    padding: 20px;
+    justify-content: center; /* 水平居中 */
+    align-items: center; /* 垂直居中 */
+  }
+  
+  
+  .Inner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+  }
+  
+  
+  .custom-progress {
+    width: 100%;  /* 設定進度條寬度為原來的150% */
+    height: 58px; /* 控制進度條高度 */
+  }
+  
+  
+  .progress-container {
+    position: relative;  /* 使進度條可以使用 absolute 定位 */
+    width: 100%;  /* 保證進度條寬度充滿容器 */
+  }
+  
+  .floor-text {
+    font-size: 16px;  /* 調整字型大小 */
+    font-weight: bold;  /* 使文字加粗 */
+    pointer-events: none;  /* 防止文字覆蓋點擊事件 */
+    z-index: 10;  /* 保證文字顯示在進度條上層 */
+  }
+  
+  /* 
+  h2 {
+    color: white; 
+    font-size: 1.5rem; 
+    font-weight: bold;
+    margin: 0.5rem 0; 
+  
+  } */
+  
+  /* @media (max-width: 768px) {
+    .container {
+      display: flex;
+      flex-direction: column;  
+      align-items: center;
+    }
+  } */

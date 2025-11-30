@@ -1,0 +1,19 @@
+2025-09-01 10:00:11,449 INFO: ✅ \\20220530-w03\Data\EAP_Health_level\source\K11\3F\K11-3F 區網(27).csv - 檔案存在，可以讀取！
+2025-09-01 10:00:44,448 INFO: 📊 成功 Ping 數: 140 / 255 (54.90%)
+2025-09-01 10:00:44,448 INFO: 🎯 符合格式且成功 Ping: 11 / 11 (100.00%)
+2025-09-01 10:00:44,505 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EAP.csv，排除重複的 File_Place：K11-3F 區網(27).csv
+2025-09-01 10:00:44,674 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EQP.csv，排除重複的 File_Place：K11-3F 區網(27).csv
+2025-09-01 10:00:44,745 INFO: ✅ 已更新 IP loss 計數檔案：\\20220530-w03\Data\EAP_Health_level\error_data\Daily_error\error_lose_ipcount_20250901.json
+2025-09-01 10:00:44,749 INFO: ✅ \\20220530-w03\Data\EAP_Health_level\source\K11\3F\K11-3F 區網(28).csv - 檔案存在，可以讀取！
+2025-09-01 10:01:33,452 INFO: 📊 成功 Ping 數: 34 / 255 (13.33%)
+2025-09-01 10:01:33,453 INFO: 🎯 符合格式且成功 Ping: 2 / 2 (100.00%)
+2025-09-01 10:01:33,506 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EAP.csv，排除重複的 File_Place：K11-3F 區網(28).csv
+2025-09-01 10:01:33,674 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EQP.csv，排除重複的 File_Place：K11-3F 區網(28).csv
+2025-09-01 10:01:33,746 INFO: ✅ 已更新 IP loss 計數檔案：\\20220530-w03\Data\EAP_Health_level\error_data\Daily_error\error_lose_ipcount_20250901.json
+2025-09-01 10:01:33,751 INFO: ✅ \\20220530-w03\Data\EAP_Health_level\source\K11\3F\K11-3F 區網(29).csv - 檔案存在，可以讀取！
+2025-09-01 10:02:06,452 INFO: 📊 成功 Ping 數: 129 / 255 (50.59%)
+2025-09-01 10:02:06,453 INFO: 🎯 符合格式且成功 Ping: 35 / 36 (97.22%)
+2025-09-01 10:02:06,507 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EAP.csv，排除重複的 File_Place：K11-3F 區網(29).csv
+2025-09-01 10:02:06,679 INFO: ✅ 已更新 \\20220530-w03\Data\EAP_Health_level\error_data\error_lose_machine_EQP.csv，排除重複的 File_Place：K11-3F 區網(29).csv
+2025-09-01 10:02:06,748 INFO: ✅ 已更新 IP loss 計數檔案：\\20220530-w03\Data\EAP_Health_level\error_data\Daily_error\error_lose_ipcount_20250901.json
+2025-09-01 10:02:06,750 INFO: ✅ 任務完成，耗時 115.30 秒
