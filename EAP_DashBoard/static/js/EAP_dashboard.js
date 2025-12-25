@@ -285,6 +285,10 @@ const app = Vue.createApp({
                 if(response.ok){
                     const data = await response.json();
                     this.unitfolders = data.folders || [];
+                    // ✅ 過濾掉 alarm_store_files
+                    this.unitfolders = (data.folders || []).filter(
+                        folder => folder !== 'alarm_store_files'
+                    );
                     console.log(this.unitfolders);
                 }else{
                     console.log("無法正常取得棟別名稱")

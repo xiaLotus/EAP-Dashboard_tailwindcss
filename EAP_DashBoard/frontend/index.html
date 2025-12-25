@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIM 系統監控看板</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --alert-red: #d93025;
+            --alert-green: #238636;
+            --text-white: #e6edf3;
+            --border-color: #30363d;
+            --accent-blue: #58a6ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-white);
+            font-family: 'Segoe UI', Microsoft JhengHei, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #app {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 1.5rem;
+            margin: 0;
+            flex: 1;
+            text-align: center;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, var(--accent-blue), #1f6feb);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(88, 166, 255, 0.3);
+        }
+
+        .refresh-btn:hover {
+            background: linear-gradient(135deg, #1f6feb, var(--accent-blue));
+            box-shadow: 0 4px 12px rgba(88, 166, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .refresh-btn:active {
+            transform: translateY(0);
+        }
+
+        .refresh-btn.refreshing {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .refresh-icon {
+            display: inline-block;
+            transition: transform 0.6s ease;
+        }
+
+        .refresh-btn.refreshing .refresh-icon {
+            animation: rotate 1s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .last-update {
+            font-size: 0.75rem;
+            color: #8b949e;
+            margin-top: 4px;
+        }
+
+        /* 上方三個斷線區塊 */
+        .alert-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .alert-panel {
+            flex: 1;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .alert-panel.disconnected {
+            background-color: var(--alert-red);
+            animation: pulse 2s infinite;
+        }
+
+        .alert-panel.connected {
+            background-color: var(--alert-green);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
+        .alert-panel h3 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 900;
+        }
+
+        .alert-panel p {
+            margin: 8px 0 0;
+            font-size: 0.85rem;
+            background: rgba(0,0,0,0.2);
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 4px;
+        }
+
+        .count-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.15);
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        /* 下方表格區塊容器 */
+        .tables-container {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .log-container {
+            flex: 1;
+            background-color: var(--panel-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .log-title {
+            font-size: 1.1rem;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .title-text {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
+        }
+
+        .table-wrapper::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-track {
+            background: #1c2128;
+            border-radius: 4px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background-color: #21262d;
+            color: var(--accent-blue);
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 2px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: #c9d1d9;
+        }
+
+        tr:hover {
+            background-color: #1c2128;
+        }
+
+        .highlight-ip {
+            color: #f0883e;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 30px;
+            color: #8b949e;
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: var(--accent-blue);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(88, 166, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent-blue);
+            animation: spin 0.8s linear infinite;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="header-container">
+        <div style="width: 150px;"></div> <!-- 左側佔位 -->
+        <h2>CIM System Management Dashboard</h2>
+        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+            <button class="refresh-btn" @click="manualRefresh" :class="{ refreshing: refreshing }" :disabled="refreshing">
+                <span class="refresh-icon">🔄</span>
+                <span>{{ refreshing ? '更新中...' : '刷新' }}</span>
+            </button>
+            <div class="last-update" v-if="lastUpdate">
+                最後更新: {{ lastUpdate }}
+            </div>
+        </div>
+    </div>
+
+    <div class="alert-container">
+        <div class="alert-panel" :class="deviceStatus.EAP.count > 0 ? 'disconnected' : 'connected'">
+            <h3>EAP {{ deviceStatus.EAP.count > 0 ? '斷線' : '正常' }}</h3>
+            <p>{{ deviceStatus.EAP.count > 0 ? 'DISCONNECTED' : 'NORMAL' }}</p>
+            <div class="count-badge">{{ deviceStatus.EAP.count }} 筆異常</div>
+        </div>
+        <div class="alert-panel" :class="deviceStatus.EQP.count > 0 ? 'disconnected' : 'connected'">
+            <h3>EQP {{ deviceStatus.EQP.count > 0 ? '斷線' : '正常' }}</h3>
+            <p>{{ deviceStatus.EQP.count > 0 ? 'DISCONNECTED' : 'NORMAL' }}</p>
+            <div class="count-badge">{{ deviceStatus.EQP.count }} 筆異常</div>
+        </div>
+        <div class="alert-panel" :class="deviceStatus.Switch.count > 0 ? 'disconnected' : 'connected'">
+            <h3>Switch {{ deviceStatus.Switch.count > 0 ? '斷線' : '正常' }}</h3>
+            <p>{{ deviceStatus.Switch.count > 0 ? 'LINK DOWN' : 'NORMAL' }}</p>
+            <div class="count-badge">{{ deviceStatus.Switch.count }} 筆異常</div>
+        </div>
+    </div>
+
+    <div class="tables-container">
+        <!-- EAP 表格 -->
+        <div class="log-container">
+            <div class="log-title">
+                <span class="title-text">
+                    ⚠️ EAP 異常斷線紀錄
+                </span>
+                <span class="count-badge">共 {{ deviceStatus.EAP.count }} 筆</span>
+            </div>
+            <div class="table-wrapper">
+                <div v-if="loading" class="loading">
+                    <div class="spinner"></div>
+                    <div>載入中...</div>
+                </div>
+                <div v-else-if="deviceStatus.EAP.data.length === 0" class="empty-message">
+                    ✅ 無異常紀錄
+                </div>
+                <table v-else>
+                    <thead>
+                        <tr>
+                            <th>時間</th>
+                            <th>IP 位址</th>
+                            <th>設備 ID</th>
+                            <th>設備類型</th>
+                            <th>位置</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item, index) in deviceStatus.EAP.data" :key="index">
+                            <td>{{ item.timestamp }}</td>
+                            <td class="highlight-ip">{{ item.ip }}</td>
+                            <td>{{ item.machine_id }}</td>
+                            <td>{{ item.device_type }}</td>
+                            <td>{{ item.location }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- EQP 表格 -->
+        <div class="log-container">
+            <div class="log-title">
+                <span class="title-text">
+                    ⚠️ EQP 異常斷線紀錄
+                </span>
+                <span class="count-badge">共 {{ deviceStatus.EQP.count }} 筆</span>
+            </div>
+            <div class="table-wrapper">
+                <div v-if="loading" class="loading">
+                    <div class="spinner"></div>
+                    <div>載入中...</div>
+                </div>
+                <div v-else-if="deviceStatus.EQP.data.length === 0" class="empty-message">
+                    ✅ 無異常紀錄
+                </div>
+                <table v-else>
+                    <thead>
+                        <tr>
+                            <th>時間</th>
+                            <th>IP 位址</th>
+                            <th>設備 ID</th>
+                            <th>設備類型</th>
+                            <th>位置</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item, index) in deviceStatus.EQP.data" :key="index">
+                            <td>{{ item.timestamp }}</td>
+                            <td class="highlight-ip">{{ item.ip }}</td>
+                            <td>{{ item.machine_id }}</td>
+                            <td>{{ item.device_type }}</td>
+                            <td>{{ item.location }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Switch 表格 -->
+        <div class="log-container">
+            <div class="log-title">
+                <span class="title-text">
+                    ⚠️ Switch 異常斷線紀錄
+                </span>
+                <span class="count-badge">共 {{ deviceStatus.Switch.count }} 筆</span>
+            </div>
+            <div class="table-wrapper">
+                <div v-if="loading" class="loading">
+                    <div class="spinner"></div>
+                    <div>載入中...</div>
+                </div>
+                <div v-else-if="deviceStatus.Switch.data.length === 0" class="empty-message">
+                    ✅ 無異常紀錄
+                </div>
+                <table v-else>
+                    <thead>
+                        <tr>
+                            <th>時間</th>
+                            <th>IP 位址</th>
+                            <th>設備 ID</th>
+                            <th>設備類型</th>
+                            <th>位置</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item, index) in deviceStatus.Switch.data" :key="index">
+                            <td>{{ item.timestamp }}</td>
+                            <td class="highlight-ip">{{ item.ip }}</td>
+                            <td>{{ item.machine_id }}</td>
+                            <td>{{ item.device_type }}</td>
+                            <td>{{ item.location }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+    data() {
+        return {
+            loading: true,
+            refreshing: false,
+            lastUpdate: null,
+            deviceStatus: {
+                EAP: {
+                    data: [],
+                    count: 0
+                },
+                EQP: {
+                    data: [],
+                    count: 0
+                },
+                Switch: {
+                    data: [],
+                    count: 0
+                }
+            }
+        };
+    },
+    mounted() {
+        this.fetchData();
+        // 每 15 分鐘自動更新一次
+        setInterval(() => {
+            this.fetchData();
+        }, 900000); // 15 分鐘 = 15 * 60 * 1000 = 900000 毫秒
+    },
+    methods: {
+        async fetchData() {
+            try {
+                const response = await axios.get('http://localhost:5000/api/txt-data-all');
+                const data = response.data;
+                
+                this.deviceStatus.EAP.data = data.EAP || [];
+                this.deviceStatus.EAP.count = this.deviceStatus.EAP.data.length;
+                
+                this.deviceStatus.EQP.data = data.EQP || [];
+                this.deviceStatus.EQP.count = this.deviceStatus.EQP.data.length;
+                
+                this.deviceStatus.Switch.data = data.Switch || [];
+                this.deviceStatus.Switch.count = this.deviceStatus.Switch.data.length;
+                
+                // 更新最後更新時間
+                const now = new Date();
+                this.lastUpdate = now.toLocaleString('zh-TW', { 
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                
+                this.loading = false;
+                this.refreshing = false;
+            } catch (error) {
+                console.error('獲取資料失敗:', error);
+                this.loading = false;
+                this.refreshing = false;
+            }
+        },
+        async manualRefresh() {
+            if (this.refreshing) return;
+            this.refreshing = true;
+            await this.fetchData();
+        }
+    }
+}).mount('#app');
+</script>
+
+</body>
+</html>

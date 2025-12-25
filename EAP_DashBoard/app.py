@@ -1134,9 +1134,7 @@ def backup_suixiu():
 
 
 # =============================================== json 歲修過帳
-# pass_dwon_ER = r"\\20220530-W03\Data\EAP_Health_level\source"
-pass_dwon_ER = r"static\source"
-
+pass_dwon_ER = r"\\20220530-W03\Data\EAP_Health_level\source"
 def load_json_data():
     """從 JSON 檔案載入資料"""
     try:
@@ -1417,7 +1415,42 @@ def delete_item(filename, category_id, item_code):
 
 
 
+def _safe_read_txt(path):
+    """讀取 txt 檔案並解析成列表"""
+    if not path or not os.path.exists(path):
+        return []
+    try:
+        data = []
+        with open(path, 'r', encoding='utf-8-sig') as f:
+            for line in f:
+                line = line.strip()
+                if line:  # 忽略空行
+                    parts = [p.strip() for p in line.split('|')]
+                    if len(parts) >= 5:
+                        data.append({
+                            'timestamp': parts[0],
+                            'ip': parts[1],
+                            'machine_id': parts[2],
+                            'device_type': parts[3],
+                            'location': parts[4]
+                        })
+        return data
+    except Exception as e:
+        print(f"⚠️ 讀取失敗 {path}: {e}")
+        return []
 
+@app.route("/api/txt-data-all")
+def get_txt_data_all():
+    """讀取所有 txt 檔案資料"""
+    # 假設 txt 檔案在同一目錄下
+    base_path = "alarm_store_files"
+    
+    data = {
+        "EAP": _safe_read_txt(os.path.join(base_path, 'EAP.txt')),
+        "EQP": _safe_read_txt(os.path.join(base_path, 'EQP.txt')),
+        "Switch": _safe_read_txt(os.path.join(base_path, 'Switch.txt')),
+    }
+    return jsonify(data)
 
 
 
