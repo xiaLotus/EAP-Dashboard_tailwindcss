@@ -1,0 +1,25 @@
+{
+  "updated_at": "2026-01-06T20:12:37.965989",
+  "records": [
+    {
+      "site": "A3",
+      "floor": "9F",
+      "station": "4153",
+      "date": "2026-12-11",
+      "time": "20:11",
+      "status": "Other",
+      "describe": "464563\n456456\n45645\n456",
+      "action": "456456\n456456\n4564"
+    },
+    {
+      "site": "F1",
+      "floor": "8F",
+      "station": "2503",
+      "date": "",
+      "time": "",
+      "status": "Wait Repair",
+      "describe": "",
+      "action": ""
+    }
+  ]
+}
