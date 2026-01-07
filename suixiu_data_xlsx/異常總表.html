@@ -14,6 +14,9 @@
 <!-- Lucide Icons -->
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.562.0/dist/umd/lucide.min.js"></script>
 
+<!-- SheetJS XLSX -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
 <!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -106,6 +109,12 @@
         font-family: 'JetBrains Mono', monospace;
     }
 
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
     .toolbar {
         display: flex;
         gap: 12px;
@@ -168,6 +177,17 @@
         box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
     }
 
+    .btn-secondary {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
+    }
+
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(100, 116, 139, 0.4);
+    }
+
     .status-indicator {
         display: flex;
         align-items: center;
@@ -204,7 +224,6 @@
     }
 
     .record-count {
-        margin-left: auto;
         padding: 8px 16px;
         background: var(--bg-gray);
         border-radius: 20px;
@@ -220,7 +239,7 @@
     .table-wrapper {
         background: var(--bg-white);
         border-radius: 16px;
-        overflow: hidden;
+        overflow: visible;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
         border: 2px solid #cbd5e1;
     }
@@ -228,6 +247,7 @@
     .table-container {
         overflow: auto;
         max-height: calc(100vh - 250px);
+        position: relative;
     }
 
     table {
@@ -244,11 +264,124 @@
         text-align: center;
         position: sticky;
         top: 0;
-        z-index: 10;
+        z-index: 20;
         border: 1px solid #cbd5e1;
         border-bottom: 2px solid var(--primary);
         text-transform: uppercase;
         letter-spacing: 0.05em;
+    }
+
+    thead th.filtered {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        color: #dc2626;
+    }
+
+    .filter-header {
+        position: relative;
+    }
+
+    .filter-trigger {
+        cursor: pointer;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        transition: color 0.2s;
+    }
+
+    .filter-trigger:hover {
+        color: var(--primary);
+    }
+
+    .filter-arrow {
+        font-size: 10px;
+        transition: transform 0.2s;
+    }
+
+    .filter-arrow.open {
+        transform: rotate(180deg);
+    }
+
+    .filter-dropdown {
+        position: fixed;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        padding: 12px;
+        min-width: 200px;
+        z-index: 1000;
+        max-height: 320px;
+        overflow-y: auto;
+    }
+
+    .filter-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .filter-options {
+        max-height: 240px;
+        overflow-y: auto;
+    }
+
+    .filter-option {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+
+    .filter-option:hover {
+        background: var(--primary-light);
+    }
+
+    .filter-option input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: var(--primary);
+    }
+
+    .filter-clear {
+        padding: 8px;
+        margin-top: 8px;
+        border-top: 1px solid var(--border);
+        text-align: right;
+    }
+
+    .filter-clear button {
+        color: var(--danger);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        background: none;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .filter-clear button:hover {
+        background: var(--danger-light);
+    }
+
+    .fade-enter-active, .fade-leave-active {
+        transition: opacity 0.2s;
+    }
+
+    .fade-enter-from, .fade-leave-to {
+        opacity: 0;
     }
 
     tbody tr {
@@ -333,7 +466,6 @@
         box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
     }
 
-    /* 美化选项 */
     select option {
         background: white;
         color: var(--text-primary);
@@ -363,7 +495,6 @@
         font-weight: 600;
     }
 
-    /* 为已选择的状态添加样式 */
     select.select-done {
         background-color: rgba(16, 185, 129, 0.1);
         color: var(--success);
@@ -446,7 +577,6 @@
     .col-action { width: 300px; min-width: 250px; }
     .col-operate { width: 100px; min-width: 100px; }
 
-    /* 置中对齐的列 */
     .text-center {
         text-align: center;
     }
@@ -574,9 +704,15 @@
                     <div class="subtitle">Abnormal Records Management</div>
                 </div>
             </div>
-            <div class="record-count">
-                <i data-lucide="database" style="width: 16px; height: 16px;"></i>
-                <span>{{ rows.length }} 筆紀錄</span>
+            <div class="header-right">
+                <div class="record-count">
+                    <i data-lucide="database" style="width: 16px; height: 16px;"></i>
+                    <span>{{ filteredRows.length }} 筆紀錄</span>
+                </div>
+                <button @click="goBack" class="btn btn-secondary">
+                    <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
+                    <span>返回</span>
+                </button>
             </div>
         </div>
 
@@ -591,6 +727,11 @@
                 <span>立即儲存</span>
             </button>
 
+            <button @click="downloadExcel" class="btn btn-primary">
+                <i data-lucide="download" style="width: 18px; height: 18px;"></i>
+                <span>下載 Excel</span>
+            </button>
+
             <div class="status-indicator">
                 <div class="status-dot" :class="saveStatus"></div>
                 <span>{{ saveStatusText }}</span>
@@ -603,12 +744,109 @@
             <table>
                 <thead>
                     <tr>
-                        <th class="col-site">Site</th>
-                        <th class="col-floor">樓層</th>
-                        <th class="col-station">站點</th>
+                        <th class="col-site filter-header" :class="{ filtered: isSiteFiltered }">
+                            <div class="filter-trigger" @click="toggleFilter('site', $event)">
+                                <span>棟別</span>
+                                <span class="filter-arrow" :class="{ open: showFilters.site }">⏷</span>
+                            </div>
+                            <transition name="fade">
+                                <div v-if="showFilters.site" class="filter-dropdown" @click.stop>
+                                    <div class="filter-title">篩選</div>
+                                    <div class="filter-options">
+                                        <label v-for="val in uniqueSites" :key="val" class="filter-option">
+                                            <input 
+                                                type="checkbox" 
+                                                :value="val" 
+                                                v-model="checkedSites" 
+                                            />
+                                            <span>{{ val || '—' }}</span>
+                                        </label>
+                                    </div>
+                                    <div class="filter-clear">
+                                        <button @click="clearFilter('site')">清除篩選</button>
+                                    </div>
+                                </div>
+                            </transition>
+                        </th>
+
+                        <th class="col-floor filter-header" :class="{ filtered: isFloorFiltered }">
+                            <div class="filter-trigger" @click="toggleFilter('floor', $event)">
+                                <span>樓層</span>
+                                <span class="filter-arrow" :class="{ open: showFilters.floor }">⏷</span>
+                            </div>
+                            <transition name="fade">
+                                <div v-if="showFilters.floor" class="filter-dropdown" @click.stop>
+                                    <div class="filter-title">篩選</div>
+                                    <div class="filter-options">
+                                        <label v-for="val in uniqueFloors" :key="val" class="filter-option">
+                                            <input 
+                                                type="checkbox" 
+                                                :value="val" 
+                                                v-model="checkedFloors" 
+                                            />
+                                            <span>{{ val || '—' }}</span>
+                                        </label>
+                                    </div>
+                                    <div class="filter-clear">
+                                        <button @click="clearFilter('floor')">清除篩選</button>
+                                    </div>
+                                </div>
+                            </transition>
+                        </th>
+
+                        <th class="col-station filter-header" :class="{ filtered: isStationFiltered }">
+                            <div class="filter-trigger" @click="toggleFilter('station', $event)">
+                                <span>站點</span>
+                                <span class="filter-arrow" :class="{ open: showFilters.station }">⏷</span>
+                            </div>
+                            <transition name="fade">
+                                <div v-if="showFilters.station" class="filter-dropdown" @click.stop>
+                                    <div class="filter-title">篩選</div>
+                                    <div class="filter-options">
+                                        <label v-for="val in uniqueStations" :key="val" class="filter-option">
+                                            <input 
+                                                type="checkbox" 
+                                                :value="val" 
+                                                v-model="checkedStations" 
+                                            />
+                                            <span>{{ val || '—' }}</span>
+                                        </label>
+                                    </div>
+                                    <div class="filter-clear">
+                                        <button @click="clearFilter('station')">清除篩選</button>
+                                    </div>
+                                </div>
+                            </transition>
+                        </th>
+
                         <th class="col-date">Date</th>
                         <th class="col-time">Time</th>
-                        <th class="col-status">Status</th>
+
+                        <th class="col-status filter-header" :class="{ filtered: isStatusFiltered }">
+                            <div class="filter-trigger" @click="toggleFilter('status', $event)">
+                                <span>Status</span>
+                                <span class="filter-arrow" :class="{ open: showFilters.status }">⏷</span>
+                            </div>
+                            <transition name="fade">
+                                <div v-if="showFilters.status" class="filter-dropdown" @click.stop>
+                                    <div class="filter-title">篩選</div>
+                                    <div class="filter-options">
+                                        <label v-for="val in uniqueStatuses" :key="val" class="filter-option">
+                                            <input 
+                                                type="checkbox" 
+                                                :value="val" 
+                                                v-model="checkedStatuses" 
+                                            />
+                                            <span>{{ val || '—' }}</span>
+                                        </label>
+                                    </div>
+                                    <div class="filter-clear">
+                                        <button @click="clearFilter('status')">清除篩選</button>
+                                    </div>
+                                </div>
+                            </transition>
+                        </th>
+
                         <th class="col-describe">Describe</th>
                         <th class="col-action">Action</th>
                         <th class="col-operate">動作</th>
@@ -616,8 +854,8 @@
                 </thead>
 
                 <tbody>
-                    <tr v-for="(row, index) in rows" :key="index" :class="getRowClass(row.status)">
-                        <td class="text-center"><input v-model="row.site" @input="onDataChange" placeholder="輸入 Site" /></td>
+                    <tr v-for="(row, index) in filteredRows" :key="row._originalIndex" :class="getRowClass(row.status)">
+                        <td class="text-center"><input v-model="row.site" @input="onDataChange" placeholder="輸入棟別" /></td>
                         <td class="text-center"><input v-model="row.floor" @input="onDataChange" placeholder="樓層" /></td>
                         <td class="text-center"><input v-model="row.station" @input="onDataChange" placeholder="站點" /></td>
                         <td class="text-center"><input type="date" v-model="row.date" @change="onDataChange" /></td>
@@ -652,7 +890,7 @@
                         </td>
                         <td class="action-cell">
                             <button 
-                                @click="removeRow(index)" 
+                                @click="removeRow(row._originalIndex)" 
                                 class="btn-delete"
                                 :disabled="isLoading">
                                 <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
@@ -679,7 +917,130 @@ createApp({
             saveStatusText: '已儲存',
             autoSaveTimer: null,
             hasUnsavedChanges: false,
-            deleteMode: 'immediate'
+            deleteMode: 'immediate',
+            
+            // 篩選相關
+            checkedSites: [],
+            checkedFloors: [],
+            checkedStations: [],
+            checkedStatuses: [],
+            
+            showFilters: {
+                site: false,
+                floor: false,
+                station: false,
+                status: false
+            }
+        }
+    },
+    computed: {
+        // 篩選後的數據
+        filteredRows() {
+            const filtered = [];
+            
+            for (let index = 0; index < this.rows.length; index++) {
+                const row = this.rows[index];
+                
+                // 檢查篩選條件
+                const matchSite = this.checkedSites.length === 0 || this.checkedSites.includes(row.site || '');
+                const matchFloor = this.checkedFloors.length === 0 || this.checkedFloors.includes(row.floor || '');
+                const matchStation = this.checkedStations.length === 0 || this.checkedStations.includes(row.station || '');
+                const matchStatus = this.checkedStatuses.length === 0 || this.checkedStatuses.includes(row.status || '');
+                
+                // 如果符合所有篩選條件，添加到結果（保持原始對象引用以便編輯）
+                if (matchSite && matchFloor && matchStation && matchStatus) {
+                    row._originalIndex = index;
+                    filtered.push(row);
+                }
+            }
+            
+            return filtered;
+        },
+
+        // 棟別唯一值（排除自己的篩選）
+        uniqueSites() {
+            return Array.from(new Set(
+                this.rows
+                    .filter(i => {
+                        const matchFloor = this.checkedFloors.length === 0 || this.checkedFloors.includes(i.floor || '');
+                        const matchStation = this.checkedStations.length === 0 || this.checkedStations.includes(i.station || '');
+                        const matchStatus = this.checkedStatuses.length === 0 || this.checkedStatuses.includes(i.status || '');
+                        return matchFloor && matchStation && matchStatus;
+                    })
+                    .map(i => i.site || '')
+            )).sort((a, b) => {
+                if (a === '') return 1;
+                if (b === '') return -1;
+                return a.localeCompare(b, 'zh-TW');
+            });
+        },
+
+        // 樓層唯一值（排除自己的篩選）
+        uniqueFloors() {
+            return Array.from(new Set(
+                this.rows
+                    .filter(i => {
+                        const matchSite = this.checkedSites.length === 0 || this.checkedSites.includes(i.site || '');
+                        const matchStation = this.checkedStations.length === 0 || this.checkedStations.includes(i.station || '');
+                        const matchStatus = this.checkedStatuses.length === 0 || this.checkedStatuses.includes(i.status || '');
+                        return matchSite && matchStation && matchStatus;
+                    })
+                    .map(i => i.floor || '')
+            )).sort((a, b) => {
+                if (a === '') return 1;
+                if (b === '') return -1;
+                return a.localeCompare(b, 'zh-TW');
+            });
+        },
+
+        // 站點唯一值（排除自己的篩選）
+        uniqueStations() {
+            return Array.from(new Set(
+                this.rows
+                    .filter(i => {
+                        const matchSite = this.checkedSites.length === 0 || this.checkedSites.includes(i.site || '');
+                        const matchFloor = this.checkedFloors.length === 0 || this.checkedFloors.includes(i.floor || '');
+                        const matchStatus = this.checkedStatuses.length === 0 || this.checkedStatuses.includes(i.status || '');
+                        return matchSite && matchFloor && matchStatus;
+                    })
+                    .map(i => i.station || '')
+            )).sort((a, b) => {
+                if (a === '') return 1;
+                if (b === '') return -1;
+                return a.localeCompare(b, 'zh-TW');
+            });
+        },
+
+        // Status 唯一值（排除自己的篩選）
+        uniqueStatuses() {
+            return Array.from(new Set(
+                this.rows
+                    .filter(i => {
+                        const matchSite = this.checkedSites.length === 0 || this.checkedSites.includes(i.site || '');
+                        const matchFloor = this.checkedFloors.length === 0 || this.checkedFloors.includes(i.floor || '');
+                        const matchStation = this.checkedStations.length === 0 || this.checkedStations.includes(i.station || '');
+                        return matchSite && matchFloor && matchStation;
+                    })
+                    .map(i => i.status || '')
+            )).sort((a, b) => {
+                if (a === '') return 1;
+                if (b === '') return -1;
+                return a.localeCompare(b, 'zh-TW');
+            });
+        },
+
+        // 篩選狀態指示
+        isSiteFiltered() {
+            return this.checkedSites.length > 0;
+        },
+        isFloorFiltered() {
+            return this.checkedFloors.length > 0;
+        },
+        isStationFiltered() {
+            return this.checkedStations.length > 0;
+        },
+        isStatusFiltered() {
+            return this.checkedStatuses.length > 0;
         }
     },
     mounted() {
@@ -692,6 +1053,25 @@ createApp({
                 e.returnValue = '';
             }
         });
+
+        // 點擊外部關閉篩選器
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.filter-header')) {
+                Object.keys(this.showFilters).forEach(key => {
+                    this.showFilters[key] = false;
+                });
+            }
+        });
+
+        // 滾動時關閉篩選器
+        const tableContainer = document.querySelector('.table-container');
+        if (tableContainer) {
+            tableContainer.addEventListener('scroll', () => {
+                Object.keys(this.showFilters).forEach(key => {
+                    this.showFilters[key] = false;
+                });
+            });
+        }
     },
     beforeUnmount() {
         this.stopAutoSave();
@@ -875,6 +1255,67 @@ createApp({
             });
         },
 
+        downloadExcel() {
+            // 確保使用篩選後的數據，並創建純淨副本（不包含 _originalIndex）
+            const exportData = this.filteredRows.map(row => {
+                return {
+                    '棟別': row.site || '',
+                    '樓層': row.floor || '',
+                    '站點': row.station || '',
+                    'Date': row.date || '',
+                    'Time': row.time || '',
+                    'Status': row.status || '',
+                    'Describe': row.describe || '',
+                    'Action': row.action || ''
+                };
+            });
+
+            // 調試信息：顯示導出的數據筆數
+            console.log('總數據筆數:', this.rows.length);
+            console.log('篩選後筆數:', this.filteredRows.length);
+            console.log('導出數據筆數:', exportData.length);
+
+            if (exportData.length === 0) {
+                this.showNotification('沒有數據可以下載', 'info');
+                return;
+            }
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+
+            ws['!cols'] = [
+                { wch: 12 },  // 棟別
+                { wch: 10 },  // 樓層
+                { wch: 12 },  // 站點
+                { wch: 15 },  // Date
+                { wch: 12 },  // Time
+                { wch: 15 },  // Status
+                { wch: 30 },  // Describe
+                { wch: 30 }   // Action
+            ];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '異常紀錄');
+
+            const now = new Date();
+            const filename = `異常紀錄_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}.xlsx`;
+
+            XLSX.writeFile(wb, filename);
+
+            // 顯示實際下載的筆數
+            const filterStatus = this.filteredRows.length < this.rows.length ? '(已篩選)' : '';
+            this.showNotification(`Excel 已下載 ${filterStatus}: 共 ${exportData.length} 筆`, 'success');
+        },
+
+        goBack() {
+            if (this.hasUnsavedChanges) {
+                if (confirm('有未儲存的變更，確定要返回嗎？')) {
+                    window.history.back();
+                }
+            } else {
+                window.history.back();
+            }
+        },
+
         getRowClass(status) {
             if (!status) return 'status-none';
             if (status === 'Done') return 'status-done';
@@ -889,6 +1330,50 @@ createApp({
             if (status === 'No Parts' || status === 'Wait Repair') return 'select-danger';
             if (status === 'Other') return 'select-other';
             return '';
+        },
+
+        // 篩選相關方法
+        toggleFilter(field, event) {
+            event.stopPropagation();
+            
+            // 關閉其他篩選器
+            Object.keys(this.showFilters).forEach(key => {
+                if (key !== field) {
+                    this.showFilters[key] = false;
+                }
+            });
+            
+            // 切換當前篩選器
+            this.showFilters[field] = !this.showFilters[field];
+            
+            // 如果打開篩選器，計算位置
+            if (this.showFilters[field]) {
+                this.$nextTick(() => {
+                    const trigger = event.currentTarget;
+                    const rect = trigger.getBoundingClientRect();
+                    const dropdown = trigger.parentElement.querySelector('.filter-dropdown');
+                    
+                    if (dropdown) {
+                        dropdown.style.top = `${rect.bottom + 8}px`;
+                        dropdown.style.left = `${rect.left}px`;
+                    }
+                });
+            }
+        },
+
+        clearFilter(field) {
+            const filterMap = {
+                'site': 'checkedSites',
+                'floor': 'checkedFloors',
+                'station': 'checkedStations',
+                'status': 'checkedStatuses'
+            };
+            
+            if (filterMap[field]) {
+                this[filterMap[field]] = [];
+            }
+            
+            this.showFilters[field] = false;
         },
 
         showNotification(message, type) {
