@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>妥善率看板 - K11 & K22</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            padding: 2rem;
+            max-width: 100%;
+        }
+
+        .site-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            flex: 1;
+        }
+
+        .site-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .back-button {
+            padding: 0.75rem 1.5rem;
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .back-button:hover {
+            background: #0284c7;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+        }
+
+        .save-status {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .save-status.saving {
+            background: #dbeafe;
+            color: #0369a1;
+            border: 2px solid #0ea5e9;
+        }
+
+        .save-status.saved {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #10b981;
+        }
+
+        .save-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #ef4444;
+        }
+
+        /* 圓餅圖區域 */
+        .charts-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 2px solid #e2e8f0;
+            overflow: hidden;
+        }
+
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chart-percentage {
+            text-align: center;
+            margin-top: 1rem;
+            margin-bottom: 0;
+            padding: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: transparent !important;
+        }
+
+        .chart-percentage.excellent {
+            color: #10b981;
+        }
+
+        .chart-percentage.good {
+            color: #f59e0b;
+        }
+
+        .chart-percentage.poor {
+            color: #ef4444;
+        }
+
+        .site-tables {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1400px) {
+            .site-tables {
+                grid-template-columns: 1fr;
+            }
+            
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .site-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .header-right {
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+
+        .site-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 2px solid #e2e8f0;
+        }
+
+        .site-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #0ea5e9;
+        }
+
+        .site-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .overall-rate {
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+            color: white;
+        }
+
+        .rate-excellent {
+            background: #10b981;
+        }
+
+        .rate-good {
+            background: #f59e0b;
+        }
+
+        .rate-poor {
+            background: #ef4444;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            border: 2px solid #cbd5e1;
+        }
+
+        .data-table thead {
+            background: #0ea5e9;
+            color: white;
+        }
+
+        .data-table th {
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid #0284c7;
+            font-size: 0.85rem;
+        }
+
+        .data-table tbody td {
+            padding: 10px 8px;
+            text-align: center;
+            border: 1px solid #cbd5e1;
+            background: white;
+            transition: background-color 0.2s;
+        }
+
+        .data-table tbody tr:hover td {
+            background: #f0f9ff !important;
+        }
+
+        .data-table tbody tr:hover td.abnormal-highlight {
+            background: #fecaca !important;
+        }
+
+        .data-table tbody tr:hover td.floor-header,
+        .data-table tbody tr:hover td.station-cell,
+        .data-table tbody tr:hover td.floor-rate {
+            opacity: 0.95;
+        }
+
+        .floor-header {
+            background: #dbeafe !important;
+            font-weight: 700;
+            color: #0369a1;
+            border: 1px solid #93c5fd !important;
+        }
+
+        .station-cell {
+            background: #f1f5f9 !important;
+            font-weight: 600;
+            color: #334155;
+            border: 1px solid #cbd5e1 !important;
+        }
+
+        .editable-cell {
+            padding: 0 !important;
+        }
+
+        .number-input {
+            width: 100%;
+            height: 100%;
+            padding: 10px 8px;
+            border: none;
+            background: transparent;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            outline: none;
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+        }
+
+        .number-input:focus {
+            background: #dbeafe;
+            box-shadow: inset 0 0 0 2px #0ea5e9;
+        }
+
+        .editable-cell.abnormal-highlight {
+            background: #fee2e2 !important;
+        }
+
+        .editable-cell.abnormal-highlight .number-input {
+            color: #dc2626;
+            font-weight: 700;
+        }
+
+        .editable-cell.zero-abnormal .number-input {
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .floor-rate {
+            background: #fef3c7 !important;
+            font-weight: 700;
+            color: #92400e;
+            border: 1px solid #fde68a !important;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(248, 250, 252, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .spinner {
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #0ea5e9;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div v-if="loading" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="dashboard-container">
+        <div class="site-header">
+            <div class="header-left">
+                <div class="site-title">妥善率看板 - K11 & K22</div>
+                <div style="color: #64748b; font-size: 0.95rem; margin-top: 0.25rem;">
+                    {{ currentTime }}
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="back-button" @click="goBack">
+                    <span>←</span> 返回
+                </button>
+                <div v-if="saveStatus === 'saving'" class="save-status saving">
+                    ⏳ 儲存中...
+                </div>
+                <div v-else-if="saveStatus === 'saved'" class="save-status saved">
+                    ✓ 已儲存
+                </div>
+                <div v-else-if="saveStatus === 'error'" class="save-status error">
+                    ✗ 儲存失敗
+                </div>
+            </div>
+        </div>
+
+        <!-- 上方圓餅圖區域 -->
+        <div class="charts-section">
+            <div class="chart-card">
+                <div class="chart-title">K11 妥善率分布</div>
+                <div class="chart-container">
+                    <canvas id="k11Chart"></canvas>
+                </div>
+                <div class="chart-percentage" :class="getRateClass(k11OverallRate)">
+                    妥善率：{{ k11OverallRate }}
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">K22 妥善率分布</div>
+                <div class="chart-container">
+                    <canvas id="k22Chart"></canvas>
+                </div>
+                <div class="chart-percentage" :class="getRateClass(k22OverallRate)">
+                    妥善率：{{ k22OverallRate }}
+                </div>
+            </div>
+        </div>
+
+        <!-- 表格區域 -->
+        <div class="site-tables">
+            <div class="site-card">
+                <div class="site-card-header">
+                    <div class="site-name">K11</div>
+                    <div class="overall-rate" :class="getRateClass(k11OverallRate)">
+                        整體妥善率：{{ k11OverallRate }}
+                    </div>
+                </div>
+
+                <div v-for="floor in getSortedFloors(k11Data)" :key="'k11-floor-' + floor.floor">
+                    <!-- 樓層標題 -->
+                    <div style="background: #dbeafe; padding: 0.75rem 1rem; margin-top: 1rem; margin-bottom: 0.5rem; border-radius: 8px; font-weight: 700; color: #0369a1; display: flex; justify-content: space-between; align-items: center;">
+                        <span>{{ floor.floor }}</span>
+                        <span style="background: #fef3c7; color: #92400e; padding: 0.5rem 1rem; border-radius: 6px;">
+                            樓層妥善率：{{ calcFloorRate(floor.data) }}
+                        </span>
+                    </div>
+
+                    <!-- 同樓層的所有站點合併在一個表格 -->
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 120px;">站點名稱</th>
+                                <th>機構名稱</th>
+                                <th style="width: 80px;">實際數量</th>
+                                <th style="width: 80px;">異常數量</th>
+                                <th style="width: 90px;">站點妥善率</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-if="Array.isArray(floor.data['站點名稱'])">
+                                <template v-for="(station, sIdx) in floor.data['站點名稱']" :key="sIdx">
+                                    <tr v-for="(mechanism, mIdx) in floor.data['機構名稱'][sIdx]" :key="mIdx">
+                                        <td v-if="mIdx === 0" 
+                                            :rowspan="floor.data['機構名稱'][sIdx].length" 
+                                            class="station-cell">
+                                            {{ station }}
+                                        </td>
+                                        <td>{{ mechanism }}</td>
+                                        <td class="editable-cell">
+                                            <input 
+                                                type="number" 
+                                                v-model.number="floor.data['實際數量'][sIdx][mIdx]"
+                                                @input="onDataChange('k11')"
+                                                class="number-input"
+                                                min="0">
+                                        </td>
+                                        <td class="editable-cell" :class="floor.data['異常數量'][sIdx][mIdx] > 0 ? 'abnormal-highlight' : 'zero-abnormal'">
+                                            <input 
+                                                type="number" 
+                                                v-model.number="floor.data['異常數量'][sIdx][mIdx]"
+                                                @input="onDataChange('k11')"
+                                                class="number-input"
+                                                min="0"
+                                                :max="floor.data['實際數量'][sIdx][mIdx]">
+                                        </td>
+                                        <td v-if="mIdx === 0" 
+                                            :rowspan="floor.data['機構名稱'][sIdx].length" 
+                                            class="floor-rate">
+                                            {{ calcStationRate(floor.data, sIdx) }}
+                                        </td>
+                                    </tr>
+                                </template>
+                            </template>
+                            <template v-else>
+                                <tr v-for="(mechanism, mIdx) in floor.data['機構名稱']" :key="mIdx">
+                                    <td v-if="mIdx === 0" 
+                                        :rowspan="floor.data['機構名稱'].length" 
+                                        class="station-cell">
+                                        {{ floor.data['站點名稱'] }}
+                                    </td>
+                                    <td>{{ mechanism }}</td>
+                                    <td class="editable-cell">
+                                        <input 
+                                            type="number" 
+                                            v-model.number="floor.data['實際數量'][mIdx]"
+                                            @input="onDataChange('k11')"
+                                            class="number-input"
+                                            min="0">
+                                    </td>
+                                    <td class="editable-cell" :class="floor.data['異常數量'][mIdx] > 0 ? 'abnormal-highlight' : 'zero-abnormal'">
+                                        <input 
+                                            type="number" 
+                                            v-model.number="floor.data['異常數量'][mIdx]"
+                                            @input="onDataChange('k11')"
+                                            class="number-input"
+                                            min="0"
+                                            :max="floor.data['實際數量'][mIdx]">
+                                    </td>
+                                    <td v-if="mIdx === 0" 
+                                        :rowspan="floor.data['機構名稱'].length" 
+                                        class="floor-rate">
+                                        {{ calcFloorRate(floor.data) }}
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="site-card">
+                <div class="site-card-header">
+                    <div class="site-name">K22</div>
+                    <div class="overall-rate" :class="getRateClass(k22OverallRate)">
+                        整體妥善率：{{ k22OverallRate }}
+                    </div>
+                </div>
+
+                <div v-for="floor in getSortedFloors(k22Data)" :key="'k22-floor-' + floor.floor">
+                    <!-- 樓層標題 -->
+                    <div style="background: #dbeafe; padding: 0.75rem 1rem; margin-top: 1rem; margin-bottom: 0.5rem; border-radius: 8px; font-weight: 700; color: #0369a1; display: flex; justify-content: space-between; align-items: center;">
+                        <span>{{ floor.floor }}</span>
+                        <span style="background: #fef3c7; color: #92400e; padding: 0.5rem 1rem; border-radius: 6px;">
+                            樓層妥善率：{{ calcFloorRate(floor.data) }}
+                        </span>
+                    </div>
+
+                    <!-- 同樓層的所有站點合併在一個表格 -->
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 120px;">站點名稱</th>
+                                <th>機構名稱</th>
+                                <th style="width: 80px;">實際數量</th>
+                                <th style="width: 80px;">異常數量</th>
+                                <th style="width: 90px;">站點妥善率</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-if="Array.isArray(floor.data['站點名稱'])">
+                                <template v-for="(station, sIdx) in floor.data['站點名稱']" :key="sIdx">
+                                    <tr v-for="(mechanism, mIdx) in floor.data['機構名稱'][sIdx]" :key="mIdx">
+                                        <td v-if="mIdx === 0" 
+                                            :rowspan="floor.data['機構名稱'][sIdx].length" 
+                                            class="station-cell">
+                                            {{ station }}
+                                        </td>
+                                        <td>{{ mechanism }}</td>
+                                        <td class="editable-cell">
+                                            <input 
+                                                type="number" 
+                                                v-model.number="floor.data['實際數量'][sIdx][mIdx]"
+                                                @input="onDataChange('k22')"
+                                                class="number-input"
+                                                min="0">
+                                        </td>
+                                        <td class="editable-cell" :class="floor.data['異常數量'][sIdx][mIdx] > 0 ? 'abnormal-highlight' : 'zero-abnormal'">
+                                            <input 
+                                                type="number" 
+                                                v-model.number="floor.data['異常數量'][sIdx][mIdx]"
+                                                @input="onDataChange('k22')"
+                                                class="number-input"
+                                                min="0"
+                                                :max="floor.data['實際數量'][sIdx][mIdx]">
+                                        </td>
+                                        <td v-if="mIdx === 0" 
+                                            :rowspan="floor.data['機構名稱'][sIdx].length" 
+                                            class="floor-rate">
+                                            {{ calcStationRate(floor.data, sIdx) }}
+                                        </td>
+                                    </tr>
+                                </template>
+                            </template>
+                            <template v-else>
+                                <tr v-for="(mechanism, mIdx) in floor.data['機構名稱']" :key="mIdx">
+                                    <td v-if="mIdx === 0" 
+                                        :rowspan="floor.data['機構名稱'].length" 
+                                        class="station-cell">
+                                        {{ floor.data['站點名稱'] }}
+                                    </td>
+                                    <td>{{ mechanism }}</td>
+                                    <td class="editable-cell">
+                                        <input 
+                                            type="number" 
+                                            v-model.number="floor.data['實際數量'][mIdx]"
+                                            @input="onDataChange('k22')"
+                                            class="number-input"
+                                            min="0">
+                                    </td>
+                                    <td class="editable-cell" :class="floor.data['異常數量'][mIdx] > 0 ? 'abnormal-highlight' : 'zero-abnormal'">
+                                        <input 
+                                            type="number" 
+                                            v-model.number="floor.data['異常數量'][mIdx]"
+                                            @input="onDataChange('k22')"
+                                            class="number-input"
+                                            min="0"
+                                            :max="floor.data['實際數量'][mIdx]">
+                                    </td>
+                                    <td v-if="mIdx === 0" 
+                                        :rowspan="floor.data['機構名稱'].length" 
+                                        class="floor-rate">
+                                        {{ calcFloorRate(floor.data) }}
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+    data() {
+        return {
+            k11Data: {},
+            k22Data: {},
+            loading: true,
+            saveStatus: 'saved',
+            currentTime: '',
+            saveTimeout: null,
+            k11Chart: null,
+            k22Chart: null
+        };
+    },
+    computed: {
+        k11OverallRate() {
+            return this.calcOverallRate(this.k11Data);
+        },
+        k22OverallRate() {
+            return this.calcOverallRate(this.k22Data);
+        }
+    },
+    methods: {
+        goBack() {
+            window.history.back();
+        },
+
+        getSortedFloors(data) {
+            return Object.entries(data)
+                .map(([floor, floorData]) => ({
+                    floor,
+                    data: floorData,
+                    num: parseInt(floor.replace("F", ""), 10)
+                }))
+                .sort((a, b) => a.num - b.num);
+        },
+
+        getTotalRows(floorData) {
+            if (Array.isArray(floorData['站點名稱'])) {
+                return floorData['機構名稱'].reduce((sum, arr) => sum + arr.length, 0);
+            } else {
+                return floorData['機構名稱'].length;
+            }
+        },
+
+        calcFloorRate(floorData) {
+            let totalActual = 0;
+            let totalAbnormal = 0;
+
+            const actual = floorData['實際數量'];
+            const abnormal = floorData['異常數量'];
+
+            if (Array.isArray(actual[0])) {
+                actual.forEach((group, gi) => {
+                    group.forEach((v, i) => {
+                        totalActual += Number(v) || 0;
+                        totalAbnormal += Number(abnormal[gi][i]) || 0;
+                    });
+                });
+            } else {
+                actual.forEach((v, i) => {
+                    totalActual += Number(v) || 0;
+                    totalAbnormal += Number(abnormal[i]) || 0;
+                });
+            }
+
+            if (totalActual === 0) return "0.00%";
+            return ((1 - totalAbnormal / totalActual) * 100).toFixed(2) + "%";
+        },
+
+        calcStationRate(floorData, stationIdx) {
+            let totalActual = 0;
+            let totalAbnormal = 0;
+
+            const actual = floorData['實際數量'];
+            const abnormal = floorData['異常數量'];
+
+            if (Array.isArray(actual[0])) {
+                // 多站點情況：只計算指定站點
+                actual[stationIdx].forEach((v, i) => {
+                    totalActual += Number(v) || 0;
+                    totalAbnormal += Number(abnormal[stationIdx][i]) || 0;
+                });
+            } else {
+                // 單站點情況：計算全部
+                actual.forEach((v, i) => {
+                    totalActual += Number(v) || 0;
+                    totalAbnormal += Number(abnormal[i]) || 0;
+                });
+            }
+
+            if (totalActual === 0) return "0.00%";
+            return ((1 - totalAbnormal / totalActual) * 100).toFixed(2) + "%";
+        },
+
+        calcOverallRate(data) {
+            let totalActual = 0;
+            let totalAbnormal = 0;
+
+            Object.values(data).forEach(floorData => {
+                const actual = floorData['實際數量'];
+                const abnormal = floorData['異常數量'];
+
+                if (Array.isArray(actual[0])) {
+                    actual.forEach((group, gi) => {
+                        group.forEach((v, i) => {
+                            totalActual += Number(v) || 0;
+                            totalAbnormal += Number(abnormal[gi][i]) || 0;
+                        });
+                    });
+                } else {
+                    actual.forEach((v, i) => {
+                        totalActual += Number(v) || 0;
+                        totalAbnormal += Number(abnormal[i]) || 0;
+                    });
+                }
+            });
+
+            if (totalActual === 0) return "0.00%";
+            return ((1 - totalAbnormal / totalActual) * 100).toFixed(2) + "%";
+        },
+
+        getRateClass(rateStr) {
+            const r = parseFloat(rateStr);
+            if (isNaN(r)) return '';
+            if (r >= 99) return 'rate-excellent';
+            if (r >= 95) return 'rate-good';
+            return 'rate-poor';
+        },
+
+        getChartData(data) {
+            let totalActual = 0;
+            let totalAbnormal = 0;
+
+            Object.values(data).forEach(floorData => {
+                const actual = floorData['實際數量'];
+                const abnormal = floorData['異常數量'];
+
+                if (Array.isArray(actual[0])) {
+                    actual.forEach((group, gi) => {
+                        group.forEach((v, i) => {
+                            totalActual += Number(v) || 0;
+                            totalAbnormal += Number(abnormal[gi][i]) || 0;
+                        });
+                    });
+                } else {
+                    actual.forEach((v, i) => {
+                        totalActual += Number(v) || 0;
+                        totalAbnormal += Number(abnormal[i]) || 0;
+                    });
+                }
+            });
+
+            const normal = totalActual - totalAbnormal;
+            return {
+                labels: ['正常', '異常'],
+                datasets: [{
+                    data: [normal, totalAbnormal],
+                    backgroundColor: ['#10b981', '#ef4444'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            };
+        },
+
+        createChart(canvasId, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'pie',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    family: 'Microsoft JhengHei'
+                                },
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(2);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        },
+
+        updateCharts() {
+            const k11Data = this.getChartData(this.k11Data);
+            const k22Data = this.getChartData(this.k22Data);
+
+            if (this.k11Chart) {
+                this.k11Chart.data = k11Data;
+                this.k11Chart.update();
+            }
+            if (this.k22Chart) {
+                this.k22Chart.data = k22Data;
+                this.k22Chart.update();
+            }
+        },
+
+        onDataChange(site) {
+            if (this.saveTimeout) {
+                clearTimeout(this.saveTimeout);
+            }
+
+            this.saveTimeout = setTimeout(() => {
+                this.autoSave(site);
+                this.updateCharts();
+            }, 1000);
+        },
+
+        async autoSave(site) {
+            this.saveStatus = 'saving';
+
+            try {
+                let response;
+                
+                if (site === 'k11') {
+                    response = await fetch("http://127.0.0.1:5000/api/save_k11", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(this.k11Data)
+                    });
+                } else if (site === 'k22') {
+                    response = await fetch("http://127.0.0.1:5000/api/save_k22", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(this.k22Data)
+                    });
+                }
+
+                if (response && response.ok) {
+                    this.saveStatus = 'saved';
+                    console.log(`✅ ${site.toUpperCase()} 數據已自動儲存`);
+                    
+                    setTimeout(() => {
+                        if (this.saveStatus === 'saved') {
+                            this.saveStatus = '';
+                        }
+                    }, 3000);
+                } else {
+                    this.saveStatus = 'error';
+                    console.error(`❌ ${site.toUpperCase()} 數據儲存失敗`);
+                }
+
+            } catch (error) {
+                this.saveStatus = 'error';
+                console.error('自動儲存失敗:', error);
+            }
+        },
+
+        updateTime() {
+            const now = new Date();
+            this.currentTime = now.toLocaleString('zh-TW', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        },
+
+        async loadData() {
+            try {
+                const [k11Response, k22Response] = await Promise.all([
+                    fetch("http://127.0.0.1:5000/api/k11"),
+                    fetch("http://127.0.0.1:5000/api/k22")
+                ]);
+
+                this.k11Data = await k11Response.json();
+                this.k22Data = await k22Response.json();
+
+                this.$nextTick(() => {
+                    this.k11Chart = this.createChart('k11Chart', this.getChartData(this.k11Data));
+                    this.k22Chart = this.createChart('k22Chart', this.getChartData(this.k22Data));
+                });
+
+            } catch (error) {
+                console.error('載入數據失敗:', error);
+                alert('載入數據失敗，請確認後端服務是否正常運行');
+            } finally {
+                this.loading = false;
+            }
+        }
+    },
+
+    mounted() {
+        this.updateTime();
+        setInterval(this.updateTime, 1000);
+        this.loadData();
+        
+        setInterval(() => {
+            if (this.saveStatus !== 'saving') {
+                this.loadData();
+            }
+        }, 60000);
+    }
+}).mount("#app");
+</script>
+
+</body>
+</html>
