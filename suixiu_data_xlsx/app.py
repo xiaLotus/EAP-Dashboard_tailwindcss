@@ -302,7 +302,7 @@ def get_hourly_rate():
         }), 404
     
     try:
-        data = read_csv_data(HOURLY_RATE_CSV_PATH, limit=15)
+        data = read_csv_data(HOURLY_RATE_CSV_PATH, limit=17)
         return jsonify(data)
     except Exception as e:
         print(f"❌ 讀取CSV失敗: {e}")
@@ -315,7 +315,7 @@ def get_hourly_rate():
         }), 500
 
 
-def read_csv_data(filepath, limit=15):
+def read_csv_data(filepath, limit=17):
     """
     從CSV文件讀取最新的N筆記錄
     

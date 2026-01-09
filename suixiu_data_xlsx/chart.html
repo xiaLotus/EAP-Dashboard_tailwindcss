@@ -89,7 +89,7 @@
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
-                            1/10 22:00 ~ 1/11 12:00
+                            1/10 20:00 ~ 1/11 12:00
                         </span>
                         <div class="px-3 py-2 bg-green-50 border-2 border-green-500 rounded-lg">
                             <span class="text-green-900 font-semibold text-sm flex items-center gap-2">
@@ -196,9 +196,9 @@
                     error: '',
                     isRefreshing: false,
                     
-                    // 数据 - 固定15个元素
-                    k11Data: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
-                    k22Data: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+                    // 数据 - 固定17个元素 (20:00~12:00)
+                    k11Data: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+                    k22Data: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
                     
                     // 时间标签 - 缓存在data中
                     timeLabels: [],
@@ -231,17 +231,16 @@
                 // 获取值的样式类
                 getValueClass(value) {
                     if (value === null || value === undefined) return 'text-gray-400';
-                    if (value >= 99) return 'text-green-600 bg-green-50';
-                    if (value >= 95) return 'text-yellow-600 bg-yellow-50';
-                    return 'text-red-600 bg-red-50';
+                    if (value < 80) return 'text-red-600 bg-red-50';
+                    return 'text-green-600 bg-green-50';
                 },
                 
                 // 生成时间标签（只调用一次）
                 generateTimeLabels() {
                     const labels = [];
-                    const startDate = new Date(2026, 0, 10, 22, 0);
+                    const startDate = new Date(2026, 0, 10, 20, 0);
                     
-                    for (let i = 0; i < 15; i++) {
+                    for (let i = 0; i < 17; i++) {
                         const t = new Date(startDate);
                         t.setHours(startDate.getHours() + i);
                         labels.push({
@@ -378,17 +377,44 @@
                         const data = await response.json();
                         console.log('📦 收到數據:', data);
                         
-                        // 更新K11 - 直接赋值到固定位置
-                        if (data.k11 && Array.isArray(data.k11)) {
-                            for (let i = 0; i < 15; i++) {
-                                this.k11Data[i] = data.k11[i] || null;
-                            }
+                        // 先清空所有數據
+                        for (let i = 0; i < 17; i++) {
+                            this.k11Data[i] = null;
+                            this.k22Data[i] = null;
                         }
                         
-                        // 更新K22
-                        if (data.k22 && Array.isArray(data.k22)) {
-                            for (let i = 0; i < 15; i++) {
-                                this.k22Data[i] = data.k22[i] || null;
+                        // 如果後端返回的是帶時間戳記的資料
+                        if (data.timestamps && Array.isArray(data.timestamps)) {
+                            // 處理帶時間戳記的資料
+                            data.timestamps.forEach((timestamp, idx) => {
+                                const date = new Date(timestamp);
+                                const hour = date.getHours();
+                                
+                                // 計算在17小時時間軸中的位置 (20:00是索引0)
+                                let position = -1;
+                                if (hour >= 20) {
+                                    position = hour - 20; // 20:00→0, 21:00→1, 22:00→2, 23:00→3
+                                } else if (hour <= 12) {
+                                    position = hour + 4; // 00:00→4, 01:00→5, ..., 12:00→16
+                                }
+                                
+                                if (position >= 0 && position < 17) {
+                                    this.k11Data[position] = data.k11[idx] || null;
+                                    this.k22Data[position] = data.k22[idx] || null;
+                                }
+                            });
+                        } else {
+                            // 向後兼容：如果後端沒有timestamps，假設是順序資料從22:00開始
+                            if (data.k11 && Array.isArray(data.k11)) {
+                                for (let i = 0; i < 15; i++) {
+                                    this.k11Data[i + 2] = data.k11[i] || null; // 從索引2開始 (22:00)
+                                }
+                            }
+                            
+                            if (data.k22 && Array.isArray(data.k22)) {
+                                for (let i = 0; i < 15; i++) {
+                                    this.k22Data[i + 2] = data.k22[i] || null;
+                                }
                             }
                         }
                         
