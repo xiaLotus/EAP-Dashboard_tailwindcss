@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設備狀態時序圖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="app">
+        <div class="container mx-auto px-4 py-8">
+            <!-- 標題 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h1 class="text-3xl font-bold text-gray-800 text-center">設備狀態時序圖</h1>
+                <p class="text-center text-gray-600 mt-2">狀態持續時間視覺化</p>
+            </div>
+
+            <!-- 載入狀態 -->
+            <div v-if="loading" class="bg-white rounded-lg shadow-md p-8 text-center">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <p class="mt-4 text-gray-600">載入中...</p>
+            </div>
+
+            <!-- 錯誤訊息 -->
+            <div v-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+                {{ error }}
+            </div>
+
+            <!-- 圖例 -->
+            <div v-if="!loading && !error" class="bg-white rounded-lg shadow-md p-4 mb-6">
+                <div class="flex justify-center gap-6">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 bg-red-500 rounded"></div>
+                        <span class="text-gray-700 font-medium">ALARM (警報)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 bg-green-500 rounded"></div>
+                        <span class="text-gray-700 font-medium">BUSY (忙碌)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 時間篩選 -->
+            <div v-if="!loading && !error" class="bg-white rounded-lg shadow-md p-4 mb-6">
+                <h3 class="font-semibold text-gray-800 mb-3">時間範圍篩選</h3>
+                
+                <!-- 快速選擇按鈕 -->
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button @click="selectQuickRange(1)" 
+                            class="px-4 py-2 rounded-lg font-medium transition-all"
+                            :class="quickRange === 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">
+                        24小時
+                    </button>
+                    <button @click="selectQuickRange(7)" 
+                            class="px-4 py-2 rounded-lg font-medium transition-all"
+                            :class="quickRange === 7 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">
+                        7天
+                    </button>
+                    <button @click="selectQuickRange(30)" 
+                            class="px-4 py-2 rounded-lg font-medium transition-all"
+                            :class="quickRange === 30 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">
+                        30天
+                    </button>
+                    <button @click="selectQuickRange(null)" 
+                            class="px-4 py-2 rounded-lg font-medium transition-all"
+                            :class="quickRange === null ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">
+                        全部
+                    </button>
+                </div>
+                
+                <!-- 自訂日期範圍 -->
+                <div class="border-t pt-4">
+                    <div class="flex flex-wrap items-end gap-3">
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">開始日期</label>
+                            <input type="date" v-model="customStartDate" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">結束日期</label>
+                            <input type="date" v-model="customEndDate" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <button @click="applyCustomRange" 
+                                class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-all">
+                            查詢
+                        </button>
+                        <button @click="resetFilter" 
+                                class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-medium transition-all">
+                            重置
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 圖表 -->
+            <div v-if="!loading && !error" class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="relative" style="height: 600px;">
+                    <canvas ref="chartCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- 統計資訊 -->
+            <div v-if="!loading && !error && stats" class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">統計資訊</h2>
+                
+                <!-- 設備選擇按鈕 -->
+                <div class="flex gap-3 mb-6 flex-wrap">
+                    <button v-for="station in Object.keys(stats)" :key="station"
+                            @click="selectedStation = station"
+                            class="px-4 py-2 rounded-lg font-medium transition-all"
+                            :class="selectedStation === station 
+                                ? 'bg-blue-600 text-white shadow-md' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'">
+                        {{ station }}
+                    </button>
+                </div>
+                
+                <!-- 顯示選中設備的資訊 -->
+                <div v-if="selectedStation && stats[selectedStation]" class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-bold text-xl text-gray-800 mb-4 pb-2 border-b">{{ selectedStation }}</h3>
+                    
+                    <!-- 總計 -->
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="bg-red-50 rounded-lg p-3">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                <span class="font-semibold text-gray-800">ALARM 總計</span>
+                            </div>
+                            <div class="text-sm text-gray-700">
+                                {{ stats[selectedStation].ALARM.count }} 次，{{ stats[selectedStation].ALARM.totalMinutes.toFixed(0) }} 分鐘 ({{ stats[selectedStation].ALARM.hours }}h)
+                            </div>
+                        </div>
+                        <div class="bg-green-50 rounded-lg p-3">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                <span class="font-semibold text-gray-800">BUSY 總計</span>
+                            </div>
+                            <div class="text-sm text-gray-700">
+                                {{ stats[selectedStation].BUSY.count }} 次，{{ stats[selectedStation].BUSY.totalMinutes.toFixed(0) }} 分鐘 ({{ stats[selectedStation].BUSY.hours }}h)
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 詳細時間列表 -->
+                    <div class="mt-4">
+                        <h4 class="font-semibold text-gray-700 mb-2">詳細時間記錄：</h4>
+                        <div class="max-h-96 overflow-y-auto space-y-1 text-sm">
+                            <div v-for="(item, index) in stats[selectedStation].timeline" :key="index" 
+                                 class="flex items-center justify-between p-2 rounded hover:bg-gray-50"
+                                 :class="item.status === 'ALARM' ? 'border-l-4 border-red-500' : 'border-l-4 border-green-500'">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full" 
+                                         :class="item.status === 'ALARM' ? 'bg-red-500' : 'bg-green-500'"></div>
+                                    <span class="font-medium" :class="item.status === 'ALARM' ? 'text-red-700' : 'text-green-700'">
+                                        {{ item.status }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-3 text-gray-600">
+                                    <span>{{ item.startFormatted }}</span>
+                                    <span>→</span>
+                                    <span>{{ item.endFormatted }}</span>
+                                    <span class="text-gray-500">({{ item.duration }}分)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    loading: true,
+                    error: null,
+                    timelineData: [],
+                    chart: null,
+                    stats: null,
+                    selectedStation: null,
+                    quickRange: 1,  // 預設24小時
+                    customStartDate: '',
+                    customEndDate: '',
+                    filterRange: {}  // 記錄當前的時間範圍
+                };
+            },
+            mounted() {
+                this.fetchData({ days: 1 });
+            },
+            methods: {
+                async fetchData(params = {}) {
+                    try {
+                        // 構建查詢字串
+                        const queryParams = new URLSearchParams();
+                        if (params.days !== undefined && params.days !== null) {
+                            queryParams.append('days', params.days);
+                        } else if (params.start && params.end) {
+                            queryParams.append('start', params.start);
+                            queryParams.append('end', params.end);
+                        }
+                        
+                        // 記錄時間範圍（用於設置圖表 X 軸）
+                        this.filterRange = params;
+                        
+                        const url = `/api/timeline-data${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+                        const response = await fetch(`http://127.0.0.1:5000${url}`);
+                        if (!response.ok) throw new Error('無法載入數據');
+                        
+                        this.timelineData = await response.json();
+                        this.calculateStats();
+                        
+                        await this.$nextTick();
+                        
+                        // 延遲一下確保 DOM 完全渲染
+                        setTimeout(() => {
+                            this.renderChart();
+                        }, 100);
+                        
+                        this.loading = false;
+                    } catch (err) {
+                        this.error = err.message;
+                        this.loading = false;
+                    }
+                },
+                
+                selectQuickRange(days) {
+                    this.quickRange = days;
+                    this.customStartDate = '';
+                    this.customEndDate = '';
+                    this.loading = true;
+                    
+                    if (days === null) {
+                        // 全部數據
+                        this.fetchData({});
+                    } else {
+                        // N天前到現在
+                        this.fetchData({ days: days });
+                    }
+                },
+                
+                applyCustomRange() {
+                    if (!this.customStartDate || !this.customEndDate) {
+                        alert('請選擇開始和結束日期');
+                        return;
+                    }
+                    
+                    if (this.customStartDate > this.customEndDate) {
+                        alert('開始日期不能晚於結束日期');
+                        return;
+                    }
+                    
+                    this.quickRange = -1; // 標記為自訂範圍
+                    this.loading = true;
+                    this.fetchData({ 
+                        start: this.customStartDate, 
+                        end: this.customEndDate 
+                    });
+                },
+                
+                resetFilter() {
+                    this.quickRange = 1;
+                    this.customStartDate = '';
+                    this.customEndDate = '';
+                    this.loading = true;
+                    this.fetchData({ days: 1 });
+                },
+                
+                getChartMinTime() {
+                    if (this.filterRange.start) {
+                        // 自訂範圍
+                        return new Date(this.filterRange.start + 'T00:00:00');
+                    } else if (this.filterRange.days) {
+                        // 快速選擇
+                        const now = new Date();
+                        return new Date(now.getTime() - this.filterRange.days * 24 * 60 * 60 * 1000);
+                    } else {
+                        // 預設24小時
+                        const now = new Date();
+                        return new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+                    }
+                },
+                
+                getChartMaxTime() {
+                    if (this.filterRange.end) {
+                        // 自訂範圍
+                        const endDate = new Date(this.filterRange.end + 'T23:59:59');
+                        return endDate;
+                    } else {
+                        // 快速選擇或預設：使用當前時間
+                        return new Date();
+                    }
+                },
+                
+                calculateStats() {
+                    const stats = {};
+                    
+                    this.timelineData.forEach(item => {
+                        if (!stats[item.station]) {
+                            stats[item.station] = {
+                                ALARM: { count: 0, totalMinutes: 0 },
+                                BUSY: { count: 0, totalMinutes: 0 },
+                                timeline: []
+                            };
+                        }
+                        
+                        if (stats[item.station][item.status]) {
+                            stats[item.station][item.status].count++;
+                            stats[item.station][item.status].totalMinutes += item.duration_minutes;
+                        }
+                        
+                        // 格式化時間顯示
+                        const startDate = new Date(item.start);
+                        const endDate = new Date(item.end);
+                        const formatTime = (date) => {
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const hour = String(date.getHours()).padStart(2, '0');
+                            const minute = String(date.getMinutes()).padStart(2, '0');
+                            return `${month}/${day} ${hour}:${minute}`;
+                        };
+                        
+                        // 添加到時間軸列表
+                        stats[item.station].timeline.push({
+                            status: item.status,
+                            start: item.start,
+                            end: item.end,
+                            startFormatted: formatTime(startDate),
+                            endFormatted: formatTime(endDate),
+                            duration: Math.round(item.duration_minutes)
+                        });
+                    });
+
+                    // 轉換為小時並格式化
+                    for (const station in stats) {
+                        stats[station].ALARM.hours = (stats[station].ALARM.totalMinutes / 60).toFixed(1);
+                        stats[station].BUSY.hours = (stats[station].BUSY.totalMinutes / 60).toFixed(1);
+                    }
+                    
+                    this.stats = stats;
+                    
+                    // 預設選擇第一個設備
+                    if (!this.selectedStation && Object.keys(stats).length > 0) {
+                        this.selectedStation = Object.keys(stats)[0];
+                    }
+                },
+                
+                renderChart() {
+                    // 確保 canvas 已渲染
+                    if (!this.$refs.chartCanvas) {
+                        console.error('Canvas element not found, retrying...');
+                        setTimeout(() => this.renderChart(), 200);
+                        return;
+                    }
+
+                    // 銷毀舊圖表
+                    if (this.chart) {
+                        this.chart.destroy();
+                    }
+
+                    const stations = [...new Set(this.timelineData.map(d => d.station))];
+                    const statusColors = {
+                        'ALARM': '#ef4444',
+                        'BUSY': '#22c55e'
+                    };
+
+                    // 為每個 station 創建一個包含所有時間段的 dataset
+                    const datasets = stations.map((station, stationIndex) => {
+                        const stationData = this.timelineData.filter(d => d.station === station);
+                        
+                        const data = stationData.map(item => ({
+                            x: [new Date(item.start), new Date(item.end)],
+                            y: station,
+                            status: item.status,
+                            duration: item.duration_minutes,
+                            station: station
+                        }));
+                        
+                        const colors = stationData.map(item => statusColors[item.status] || '#999');
+
+                        return {
+                            label: station,
+                            data: data,
+                            backgroundColor: colors,
+                            borderWidth: 1,
+                            borderColor: 'rgba(255, 255, 255, 0.3)',
+                            barThickness: 30
+                        };
+                    });
+
+                    const ctx = this.$refs.chartCanvas.getContext('2d');
+                    this.chart = new Chart(ctx, {
+                        type: 'bar',
+                        data: { datasets },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    type: 'time',
+                                    time: {
+                                        unit: 'hour',
+                                        displayFormats: {
+                                            hour: 'MM/dd HH:mm'
+                                        }
+                                    },
+                                    min: this.getChartMinTime(),
+                                    max: this.getChartMaxTime(),
+                                    title: {
+                                        display: true,
+                                        text: '時間',
+                                        font: { size: 14, weight: 'bold' }
+                                    },
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.05)'
+                                    }
+                                },
+                                y: {
+                                    type: 'category',
+                                    labels: stations,
+                                    title: {
+                                        display: true,
+                                        text: '設備站點',
+                                        font: { size: 14, weight: 'bold' }
+                                    },
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                    padding: 12,
+                                    titleFont: { size: 14, weight: 'bold' },
+                                    bodyFont: { size: 13 },
+                                    callbacks: {
+                                        title: function(context) {
+                                            const data = context[0].raw;
+                                            return data.station || context[0].dataset.label;
+                                        },
+                                        label: function(context) {
+                                            const data = context.raw;
+                                            const start = new Date(data.x[0]).toLocaleString('zh-TW', {
+                                                month: '2-digit',
+                                                day: '2-digit',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            });
+                                            const end = new Date(data.x[1]).toLocaleString('zh-TW', {
+                                                month: '2-digit',
+                                                day: '2-digit',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            });
+                                            const duration = data.duration.toFixed(1);
+                                            return [
+                                                `狀態: ${data.status}`,
+                                                `開始: ${start}`,
+                                                `結束: ${end}`,
+                                                `持續: ${duration} 分鐘`
+                                            ];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
