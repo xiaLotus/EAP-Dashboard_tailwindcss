@@ -10,11 +10,44 @@ CORS(app)
 def index():
     return send_file('index.html')
 
+@app.route('/api/filters')
+def get_filters():
+    """獲取可用的 building 和 floor 列表"""
+    df = pd.read_csv('machine_status.csv')
+    
+    buildings = sorted(df['building'].unique().tolist())
+    floors = sorted(df['floor'].unique().tolist())
+    
+    # 獲取 building + floor 組合
+    combinations = df.groupby(['building', 'floor']).size().reset_index()[['building', 'floor']]
+    combos = combinations.to_dict('records')
+    
+    return jsonify({
+        'buildings': buildings,
+        'floors': floors,
+        'combinations': combos
+    })
+
 @app.route('/api/timeline-data')
 def get_timeline_data():
     # 讀取 CSV
     df_all = pd.read_csv('machine_status.csv')
     df_all['received_at'] = pd.to_datetime(df_all['received_at'])
+    
+    # 獲取時間範圍參數
+    days = request.args.get('days', type=int)
+    start_date = request.args.get('start')
+    end_date = request.args.get('end')
+    
+    # 獲取 building 和 floor 參數
+    building = request.args.get('building')
+    floor = request.args.get('floor')
+    
+    # 先按 building 和 floor 篩選
+    if building:
+        df_all = df_all[df_all['building'] == building]
+    if floor:
+        df_all = df_all[df_all['floor'] == floor]
     
     # 獲取時間範圍參數
     days = request.args.get('days', type=int)

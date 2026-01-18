@@ -43,6 +43,33 @@
                 </div>
             </div>
 
+            <!-- Building 和 Floor 篩選 -->
+            <div v-if="!loading && !error" class="bg-white rounded-lg shadow-md p-4 mb-6">
+                <h3 class="font-semibold text-gray-800 mb-3">設備位置篩選</h3>
+                <div class="flex flex-wrap items-end gap-3">
+                    <div class="flex-1 min-w-[150px]">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Building</label>
+                        <select v-model="selectedBuilding" @change="onLocationChange"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">全部</option>
+                            <option v-for="building in availableBuildings" :key="building" :value="building">
+                                {{ building }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Floor</label>
+                        <select v-model="selectedFloor" @change="onLocationChange"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">全部</option>
+                            <option v-for="floor in availableFloors" :key="floor" :value="floor">
+                                {{ floor }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <!-- 時間篩選 -->
             <div v-if="!loading && !error" class="bg-white rounded-lg shadow-md p-4 mb-6">
                 <h3 class="font-semibold text-gray-800 mb-3">時間範圍篩選</h3>
@@ -188,13 +215,95 @@
                     quickRange: 1,  // 預設24小時
                     customStartDate: '',
                     customEndDate: '',
-                    filterRange: {}  // 記錄當前的時間範圍
+                    filterRange: {},  // 記錄當前的時間範圍
+                    // Building 和 Floor 篩選
+                    availableBuildings: [],
+                    availableFloors: [],
+                    selectedBuilding: '',
+                    selectedFloor: ''
                 };
             },
             mounted() {
-                this.fetchData({ days: 1 });
+                this.fetchFilters();
             },
             methods: {
+                async fetchFilters() {
+                    try {
+                        const response = await fetch('http://127.0.0.1:5000/api/filters');
+                        const data = await response.json();
+                        
+                        // 設置 Building 和 Floor 選項
+                        this.availableBuildings = data.buildings;
+                        this.availableFloors = data.floors;
+                        
+                        // 從 localStorage 讀取之前的選擇
+                        const savedBuilding = localStorage.getItem('selectedBuilding');
+                        const savedFloor = localStorage.getItem('selectedFloor');
+                        const savedQuickRange = localStorage.getItem('quickRange');
+                        const savedStartDate = localStorage.getItem('customStartDate');
+                        const savedEndDate = localStorage.getItem('customEndDate');
+                        
+                        // 恢復 Building 選擇
+                        if (savedBuilding && this.availableBuildings.includes(savedBuilding)) {
+                            this.selectedBuilding = savedBuilding;
+                        } else if (this.availableBuildings.length > 0) {
+                            this.selectedBuilding = this.availableBuildings[0];
+                        }
+                        
+                        // 恢復 Floor 選擇
+                        if (savedFloor && this.availableFloors.includes(savedFloor)) {
+                            this.selectedFloor = savedFloor;
+                        } else if (this.availableFloors.length > 0) {
+                            this.selectedFloor = this.availableFloors[0];
+                        }
+                        
+                        // 恢復時間範圍選擇
+                        if (savedQuickRange !== null) {
+                            this.quickRange = parseInt(savedQuickRange);
+                        }
+                        if (savedStartDate) {
+                            this.customStartDate = savedStartDate;
+                        }
+                        if (savedEndDate) {
+                            this.customEndDate = savedEndDate;
+                        }
+                        
+                        // 載入數據（使用恢復的設定）
+                        if (this.customStartDate && this.customEndDate) {
+                            this.fetchData({ start: this.customStartDate, end: this.customEndDate });
+                        } else {
+                            this.fetchData({ days: this.quickRange });
+                        }
+                    } catch (err) {
+                        console.error('無法載入篩選選項:', err);
+                        this.fetchData({ days: 1 });
+                    }
+                },
+                
+                onLocationChange() {
+                    // 保存選擇到 localStorage
+                    localStorage.setItem('selectedBuilding', this.selectedBuilding);
+                    localStorage.setItem('selectedFloor', this.selectedFloor);
+                    
+                    // 位置改變時，重新載入數據
+                    this.loading = true;
+                    
+                    // 使用當前的時間範圍設定
+                    if (this.quickRange === -1 && this.customStartDate && this.customEndDate) {
+                        // 自訂範圍
+                        this.fetchData({
+                            start: this.customStartDate,
+                            end: this.customEndDate
+                        });
+                    } else if (this.quickRange !== null) {
+                        // 快速選擇
+                        this.fetchData({ days: this.quickRange });
+                    } else {
+                        // 全部
+                        this.fetchData({});
+                    }
+                },
+                
                 async fetchData(params = {}) {
                     try {
                         // 構建查詢字串
@@ -204,6 +313,14 @@
                         } else if (params.start && params.end) {
                             queryParams.append('start', params.start);
                             queryParams.append('end', params.end);
+                        }
+                        
+                        // 添加 building 和 floor 參數
+                        if (this.selectedBuilding) {
+                            queryParams.append('building', this.selectedBuilding);
+                        }
+                        if (this.selectedFloor) {
+                            queryParams.append('floor', this.selectedFloor);
                         }
                         
                         // 記錄時間範圍（用於設置圖表 X 軸）
@@ -236,6 +353,11 @@
                     this.customEndDate = '';
                     this.loading = true;
                     
+                    // 保存到 localStorage
+                    localStorage.setItem('quickRange', days);
+                    localStorage.removeItem('customStartDate');
+                    localStorage.removeItem('customEndDate');
+                    
                     if (days === null) {
                         // 全部數據
                         this.fetchData({});
@@ -244,6 +366,7 @@
                         this.fetchData({ days: days });
                     }
                 },
+                
                 
                 applyCustomRange() {
                     if (!this.customStartDate || !this.customEndDate) {
@@ -258,6 +381,12 @@
                     
                     this.quickRange = -1; // 標記為自訂範圍
                     this.loading = true;
+                    
+                    // 保存到 localStorage
+                    localStorage.setItem('quickRange', '-1');
+                    localStorage.setItem('customStartDate', this.customStartDate);
+                    localStorage.setItem('customEndDate', this.customEndDate);
+                    
                     this.fetchData({ 
                         start: this.customStartDate, 
                         end: this.customEndDate 
@@ -269,6 +398,12 @@
                     this.customStartDate = '';
                     this.customEndDate = '';
                     this.loading = true;
+                    
+                    // 保存重置後的設定到 localStorage
+                    localStorage.setItem('quickRange', '1');
+                    localStorage.removeItem('customStartDate');
+                    localStorage.removeItem('customEndDate');
+                    
                     this.fetchData({ days: 1 });
                 },
                 
@@ -296,6 +431,15 @@
                         // 快速選擇或預設：使用當前時間
                         return new Date();
                     }
+                },
+                
+                onBuildingOrFloorChange() {
+                    // Building 或 Floor 改變時，重新載入 24 小時數據
+                    this.quickRange = 1;
+                    this.customStartDate = '';
+                    this.customEndDate = '';
+                    this.loading = true;
+                    this.fetchData({ days: 1 });
                 },
                 
                 calculateStats() {
