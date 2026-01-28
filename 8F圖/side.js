@@ -2,6 +2,7 @@ const app = Vue.createApp({
     data() {
         return {
             loading: true,
+            centerLoading: false, // 中間載入動畫狀態
             error: null,
             timelineData: [],
             chart: null,
@@ -13,6 +14,7 @@ const app = Vue.createApp({
             filterRange: {},
             availableBuildings: [],
             availableFloors: [],
+            buildingFloorCombinations: [],
             selectedBuilding: '',
             selectedFloor: ''
         };
@@ -23,8 +25,25 @@ const app = Vue.createApp({
             const stations = [...new Set(this.timelineData.map(d => d.station))];
             const stationCount = stations.length;
             const height = Math.max(800, stationCount * 100);
-            console.log('📊 Station 數量:', stationCount, '| 計算高度:', height + 'px');
             return height;
+        },
+        
+        // 根據選中的 building 顯示對應的 floors
+        buildingFloors() {
+            const result = {};
+            this.buildingFloorCombinations.forEach(combo => {
+                if (!result[combo.building]) {
+                    result[combo.building] = [];
+                }
+                if (!result[combo.building].includes(combo.floor)) {
+                    result[combo.building].push(combo.floor);
+                }
+            });
+            // 排序每個 building 的 floors
+            Object.keys(result).forEach(building => {
+                result[building].sort();
+            });
+            return result;
         }
     },
     
@@ -33,6 +52,22 @@ const app = Vue.createApp({
     },
     
     methods: {
+        // 顯示中間載入動畫
+        showCenterLoading() {
+            const centerLoading = document.getElementById('centerLoading');
+            if (centerLoading) {
+                centerLoading.classList.add('active');
+            }
+        },
+        
+        // 隱藏中間載入動畫
+        hideCenterLoading() {
+            const centerLoading = document.getElementById('centerLoading');
+            if (centerLoading) {
+                centerLoading.classList.remove('active');
+            }
+        },
+        
         async fetchFilters() {
             try {
                 const response = await fetch('http://127.0.0.1:5000/api/filters');
@@ -40,25 +75,32 @@ const app = Vue.createApp({
                 
                 this.availableBuildings = data.buildings;
                 this.availableFloors = data.floors;
+                this.buildingFloorCombinations = data.combinations;
                 
+                // 從 localStorage 讀取保存的選擇
                 const savedBuilding = localStorage.getItem('selectedBuilding');
                 const savedFloor = localStorage.getItem('selectedFloor');
                 const savedQuickRange = localStorage.getItem('quickRange');
                 const savedStartDate = localStorage.getItem('customStartDate');
                 const savedEndDate = localStorage.getItem('customEndDate');
                 
+                // 設定 Building：優先使用保存的值，否則預設 K22
                 if (savedBuilding && this.availableBuildings.includes(savedBuilding)) {
                     this.selectedBuilding = savedBuilding;
+                } else if (this.availableBuildings.includes('K22')) {
+                    this.selectedBuilding = 'K22'; // 預設選擇 K22
                 } else if (this.availableBuildings.length > 0) {
                     this.selectedBuilding = this.availableBuildings[0];
                 }
                 
+                // 設定 Floor：優先使用保存的值，否則預設 8F
                 if (savedFloor && this.availableFloors.includes(savedFloor)) {
                     this.selectedFloor = savedFloor;
-                } else if (this.availableFloors.length > 0) {
-                    this.selectedFloor = this.availableFloors[0];
+                } else if (this.availableFloors.includes('8F')) {
+                    this.selectedFloor = '8F'; // 預設選擇 8F
                 }
                 
+                // 設定時間範圍
                 if (savedQuickRange !== null) {
                     this.quickRange = parseInt(savedQuickRange);
                 }
@@ -69,6 +111,7 @@ const app = Vue.createApp({
                     this.customEndDate = savedEndDate;
                 }
                 
+                // 載入數據
                 if (this.customStartDate && this.customEndDate) {
                     this.fetchData({ start: this.customStartDate, end: this.customEndDate });
                 } else {
@@ -76,22 +119,12 @@ const app = Vue.createApp({
                 }
             } catch (err) {
                 console.error('無法載入篩選選項:', err);
-                this.fetchData({ days: 1 });
+                this.error = '無法連接到後台服務，請確認 http://127.0.0.1:5000 是否運行中';
+                this.loading = false;
             }
         },
         
-        onLocationChange() {
-            localStorage.setItem('selectedBuilding', this.selectedBuilding);
-            localStorage.setItem('selectedFloor', this.selectedFloor);
-            
-            this.loading = true;
-            if (this.customStartDate && this.customEndDate) {
-                this.fetchData({ start: this.customStartDate, end: this.customEndDate });
-            } else {
-                this.fetchData({ days: this.quickRange });
-            }
-        },
-
+        // 選擇 building（支援切換）
         selectBuilding(building) {
             // 如果點擊的是已選中的 building，則取消選中（收起）
             if (this.selectedBuilding === building) {
@@ -102,8 +135,34 @@ const app = Vue.createApp({
                 this.selectedBuilding = building;
                 this.selectedFloor = '';
             }
+            this.onLocationChange();
         },
-                
+        
+        // 選擇 floor
+        selectFloor(floor) {
+            if (this.selectedFloor === floor) {
+                // 如果點擊已選中的 floor，則取消選擇
+                this.selectedFloor = '';
+            } else {
+                this.selectedFloor = floor;
+            }
+            this.onLocationChange();
+        },
+        
+        onLocationChange() {
+            localStorage.setItem('selectedBuilding', this.selectedBuilding);
+            localStorage.setItem('selectedFloor', this.selectedFloor);
+            
+            // 顯示中間載入動畫
+            this.showCenterLoading();
+            
+            if (this.customStartDate && this.customEndDate) {
+                this.fetchData({ start: this.customStartDate, end: this.customEndDate });
+            } else {
+                this.fetchData({ days: this.quickRange });
+            }
+        },
+        
         async fetchData(params = {}) {
             try {
                 const queryParams = new URLSearchParams();
@@ -137,9 +196,16 @@ const app = Vue.createApp({
                 }, 100);
                 
                 this.loading = false;
+                
+                // 隱藏中間載入動畫
+                setTimeout(() => {
+                    this.hideCenterLoading();
+                }, 300);
+                
             } catch (err) {
                 this.error = err.message;
                 this.loading = false;
+                this.hideCenterLoading(); // 錯誤時也要隱藏
             }
         },
         
@@ -147,11 +213,13 @@ const app = Vue.createApp({
             this.quickRange = days;
             this.customStartDate = '';
             this.customEndDate = '';
-            this.loading = true;
             
             localStorage.setItem('quickRange', days);
             localStorage.removeItem('customStartDate');
             localStorage.removeItem('customEndDate');
+            
+            // 顯示中間載入動畫
+            this.showCenterLoading();
             
             this.fetchData({ days });
         },
@@ -163,11 +231,13 @@ const app = Vue.createApp({
             }
             
             this.quickRange = null;
-            this.loading = true;
             
             localStorage.setItem('customStartDate', this.customStartDate);
             localStorage.setItem('customEndDate', this.customEndDate);
             localStorage.removeItem('quickRange');
+            
+            // 顯示中間載入動畫
+            this.showCenterLoading();
             
             this.fetchData({ 
                 start: this.customStartDate, 
@@ -179,11 +249,13 @@ const app = Vue.createApp({
             this.customStartDate = '';
             this.customEndDate = '';
             this.quickRange = 1;
-            this.loading = true;
             
             localStorage.removeItem('customStartDate');
             localStorage.removeItem('customEndDate');
             localStorage.setItem('quickRange', 1);
+            
+            // 顯示中間載入動畫
+            this.showCenterLoading();
             
             this.fetchData({ days: 1 });
         },
@@ -203,10 +275,6 @@ const app = Vue.createApp({
                 return new Date(this.filterRange.end);
             }
             return new Date();
-        },
-        
-        onBuildingOrFloorChange() {
-            this.onLocationChange();
         },
         
         calculateStats() {
@@ -268,18 +336,13 @@ const app = Vue.createApp({
             }
             
             const allStations = [...new Set(this.timelineData.map(d => d.station))];
-            console.log('📊 所有 Station:', allStations);
-            console.log('📊 timelineData 總筆數:', this.timelineData.length);
             
             const stationDataCount = {};
             allStations.forEach(station => {
                 stationDataCount[station] = this.timelineData.filter(d => d.station === station).length;
             });
-            console.log('📊 每個 Station 的數據量:', stationDataCount);
             
             const stations = allStations.filter(station => stationDataCount[station] > 0);
-            console.log('📊 有數據的 Station:', stations);
-            console.log('📊 Station 數量:', stations.length);
             
             const statusColors = {
                 'ALARM': '#ef4444',
@@ -300,9 +363,6 @@ const app = Vue.createApp({
                 allColors.push(statusColors[item.status] || '#999');
             });
             
-            console.log('📊 總數據點:', allData.length);
-            console.log('📊 數據點示例:', allData.slice(0, 3));
-            
             const ctx = this.$refs.chartCanvas.getContext('2d');
             this.chart = new Chart(ctx, {
                 type: 'bar',
@@ -320,6 +380,41 @@ const app = Vue.createApp({
                     indexAxis: 'y',
                     responsive: true,
                     maintainAspectRatio: false,
+                    // 鼠標懸停時顯示手型游標
+                    onHover: (event, activeElements) => {
+                        event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+                    },
+                    // 添加點擊事件
+                    onClick: (event, activeElements) => {
+                        if (activeElements.length > 0) {
+                            const dataIndex = activeElements[0].index;
+                            const clickedData = allData[dataIndex];
+                            const clickedStation = clickedData.station;
+                            
+                            // 設置選中的設備
+                            this.selectedStation = clickedStation;
+                            
+                            // 滾動到統計資訊區域
+                            setTimeout(() => {
+                                const statsSection = document.getElementById('statsSection');
+                                if (statsSection) {
+                                    // 滾動到統計區域
+                                    statsSection.scrollIntoView({ 
+                                        behavior: 'smooth', 
+                                        block: 'start' 
+                                    });
+                                    
+                                    // 添加短暫的高亮效果
+                                    statsSection.style.boxShadow = '0 0 20px rgba(59, 130, 246, 0.5)';
+                                    setTimeout(() => {
+                                        statsSection.style.boxShadow = '';
+                                    }, 1000);
+                                }
+                            }, 100);
+                            
+                            console.log('點擊了設備:', clickedStation);
+                        }
+                    },
                     scales: {
                         x: {
                             type: 'time',
@@ -388,6 +483,9 @@ const app = Vue.createApp({
                                         `結束: ${end}`,
                                         `持續: ${duration} 分鐘`
                                     ];
+                                },
+                                footer: function(context) {
+                                    return '💡 點擊查看詳細統計資訊';
                                 }
                             }
                         }
@@ -401,3 +499,23 @@ const app = Vue.createApp({
 });
 
 app.mount('#app');
+
+// Loading 動畫控制
+window.addEventListener('load', function() {
+    // 等待2秒後隱藏 loading 畫面
+    setTimeout(function() {
+        const loadingScreen = document.getElementById('loadingScreen');
+        const appElement = document.getElementById('app');
+        
+        // 添加淡出效果
+        loadingScreen.classList.add('fade-out');
+        
+        // 同時顯示主內容
+        appElement.classList.add('show');
+        
+        // 動畫結束後移除 loading 元素
+        setTimeout(function() {
+            loadingScreen.style.display = 'none';
+        }, 500); // 等待淡出動畫完成（0.5秒）
+    }, 2000); // 2秒延遲
+});
