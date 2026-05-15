@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每小時妥善率監控</title>
+    
+    <!-- Vue 3 -->
+    <script src="../static/js/vue.global.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="../static/js/tailwindcss.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="../static/js/chart.js"></script>
+    
+    <style>
+        [v-cloak] {
+            display: none;
+        }
+        
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        #app {
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .data-table {
+            table-layout: fixed;
+            width: 100%;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 0.5rem;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <div id="app" v-cloak>
+        
+        <!-- Loading State -->
+        <div v-if="loading" class="flex items-center justify-center h-screen">
+            <div class="text-center">
+                <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mb-4"></div>
+                <p class="text-gray-600 text-lg font-semibold">載入數據中...</p>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div v-else-if="error" class="flex items-center justify-center h-screen">
+            <div class="bg-red-50 border-2 border-red-500 rounded-xl p-8 max-w-md">
+                <div class="text-red-600 text-6xl mb-4 text-center">⚠️</div>
+                <h2 class="text-2xl font-bold text-red-900 mb-2 text-center">載入失敗</h2>
+                <p class="text-red-700 mb-4 text-center">{{ error }}</p>
+                <button @click="manualRefresh" 
+                        class="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-all">
+                    重新載入
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div v-show="!loading && !error" class="flex flex-col h-screen">
+            
+            <!-- Header -->
+            <div class="bg-white shadow-sm border-b-2 border-gray-200 px-6 py-4 flex-shrink-0">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                            <span>📊</span>
+                            <span>每小時妥善率監控</span>
+                            <span class="text-sm font-normal text-gray-600">{{ currentTime }}</span>
+                        </h1>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button @click="goBack"
+                                class="px-3 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg text-sm font-semibold flex items-center gap-2 transition">
+                            <span>⬅️</span>
+                            <span>返回</span>
+                        </button>
+                        <span class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                            1/10 22:00 ~ 1/11 12:00
+                        </span>
+                        <div class="px-3 py-2 bg-green-50 border-2 border-green-500 rounded-lg">
+                            <span class="text-green-900 font-semibold text-sm flex items-center gap-2">
+                                <span class="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                自動刷新
+                            </span>
+                        </div>
+                        <button @click="manualRefresh" 
+                                :disabled="isRefreshing"
+                                class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-all flex items-center gap-2 disabled:opacity-50">
+                            <span>🔄</span>
+                            <span v-if="isRefreshing">刷新中...</span>
+                            <span v-else>刷新</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="flex-1 flex flex-col px-6 py-4 gap-4 overflow-hidden">
+                
+                <!-- Chart Section -->
+                <div class="bg-white rounded-xl shadow-sm border-2 border-gray-200 p-4 flex-1 flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                        <h2 class="text-xl font-bold text-gray-900">📈 妥善率趨勢圖</h2>
+                        <div class="flex gap-4">
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-1 bg-blue-500 rounded"></div>
+                                <span class="text-sm font-semibold text-gray-700">K11</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-1 bg-green-500 rounded"></div>
+                                <span class="text-sm font-semibold text-gray-700">K22</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 relative">
+                        <canvas ref="chartCanvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Table Section -->
+                <div class="bg-white rounded-xl shadow-sm border-2 border-gray-200 p-4 flex-1 flex flex-col overflow-hidden">
+                    <h2 class="text-xl font-bold text-gray-900 mb-3 flex-shrink-0">📋 妥善率數據</h2>
+                    <div class="flex-1 overflow-hidden">
+                        <table class="data-table border-collapse w-full h-full">
+                            <thead>
+                                <tr class="bg-gradient-to-r from-blue-500 to-blue-600">
+                                    <th class="border border-blue-400 text-white font-semibold text-sm" style="width: 80px;"></th>
+                                    <th v-for="(label, index) in timeLabels" :key="index"
+                                        class="border border-blue-400 text-white text-center">
+                                        <div class="text-xs opacity-90">{{ label.date }}</div>
+                                        <div class="text-sm font-bold">{{ label.time }}</div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- K11 Row -->
+                                <tr class="hover:bg-blue-50 transition-colors">
+                                    <td class="border border-gray-300 bg-gradient-to-r from-blue-100 to-blue-200 font-bold text-gray-900 text-center">
+                                        K11
+                                    </td>
+                                    <td v-for="(value, index) in k11Data" :key="'k11-' + index"
+                                        class="border border-gray-300 text-center font-semibold"
+                                        :class="getValueClass(value)">
+                                        {{ formatValue(value) }}
+                                    </td>
+                                </tr>
+
+                                <!-- K22 Row -->
+                                <tr class="hover:bg-green-50 transition-colors">
+                                    <td class="border border-gray-300 bg-gradient-to-r from-green-100 to-green-200 font-bold text-gray-900 text-center">
+                                        K22
+                                    </td>
+                                    <td v-for="(value, index) in k22Data" :key="'k22-' + index"
+                                        class="border border-gray-300 text-center font-semibold"
+                                        :class="getValueClass(value)">
+                                        {{ formatValue(value) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const app = Vue.createApp({
+            data() {
+                return {
+                    // 配置
+                    apiUrl: 'http://127.0.0.1:5000/api/hourly_rate',
+                    refreshInterval: 30000,
+                    
+                    // 状态
+                    chart: null,
+                    currentTime: '',
+                    loading: true,
+                    error: '',
+                    isRefreshing: false,
+                    
+                    // 数据 - 固定15个元素
+                    k11Data: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+                    k22Data: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+                    
+                    // 时间标签 - 缓存在data中
+                    timeLabels: [],
+                    
+                    // 定时器
+                    refreshTimer: null,
+                    timeTimer: null
+                };
+            },
+            
+            methods: {
+                // 更新时间
+                updateTime() {
+                    const now = new Date();
+                    this.currentTime = now.toLocaleString('zh-TW', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                },
+                
+                // 格式化值
+                formatValue(value) {
+                    if (value === null || value === undefined) return '--';
+                    return value.toFixed(2) + '%';
+                },
+                
+                // 获取值的样式类
+                getValueClass(value) {
+                    if (value === null || value === undefined) return 'text-gray-400';
+                    if (value >= 99) return 'text-green-600 bg-green-50';
+                    if (value >= 95) return 'text-yellow-600 bg-yellow-50';
+                    return 'text-red-600 bg-red-50';
+                },
+                
+                // 生成时间标签（只调用一次）
+                generateTimeLabels() {
+                    const labels = [];
+                    const startDate = new Date(2026, 0, 10, 22, 0);
+                    
+                    for (let i = 0; i < 15; i++) {
+                        const t = new Date(startDate);
+                        t.setHours(startDate.getHours() + i);
+                        labels.push({
+                            date: `${t.getMonth() + 1}/${t.getDate()}`,
+                            time: `${String(t.getHours()).padStart(2, '0')}:00`
+                        });
+                    }
+                    
+                    this.timeLabels = labels;
+                    console.log('✅ 時間標籤已生成');
+                },
+                
+                // 初始化图表
+                initChart() {
+                    if (!this.$refs.chartCanvas) {
+                        console.error('❌ Canvas不存在');
+                        return;
+                    }
+
+                    try {
+                        const ctx = this.$refs.chartCanvas.getContext('2d');
+                        
+                        this.chart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: this.timeLabels.map(l => l.time),
+                                datasets: [
+                                    {
+                                        label: 'K11',
+                                        data: this.k11Data,
+                                        borderColor: '#3b82f6',
+                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                        tension: 0.4,
+                                        borderWidth: 3,
+                                        pointRadius: 6,
+                                        pointBackgroundColor: '#3b82f6',
+                                        pointBorderColor: '#fff',
+                                        pointBorderWidth: 2
+                                    },
+                                    {
+                                        label: 'K22',
+                                        data: this.k22Data,
+                                        borderColor: '#10b981',
+                                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                        tension: 0.4,
+                                        borderWidth: 3,
+                                        pointRadius: 6,
+                                        pointBackgroundColor: '#10b981',
+                                        pointBorderColor: '#fff',
+                                        pointBorderWidth: 2
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                        padding: 12,
+                                        callbacks: {
+                                            label: (context) => {
+                                                return context.dataset.label + ': ' + 
+                                                       (context.parsed.y !== null ? context.parsed.y.toFixed(2) + '%' : 'N/A');
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        min: 0,
+                                        max: 100,
+                                        ticks: {
+                                            callback: v => v + '%',
+                                            font: { size: 14, weight: '600' }
+                                        }
+                                    },
+                                    x: {
+                                        ticks: { font: { size: 13 } }
+                                    }
+                                }
+                            }
+                        });
+
+                        console.log('✅ 圖表初始化完成');
+                    } catch (err) {
+                        console.error('❌ 圖表初始化失敗:', err);
+                    }
+                },
+                
+                // 更新图表 - 简化版
+                updateChart() {
+                    if (!this.chart) {
+                        console.warn('⚠️ Chart不存在，跳過更新');
+                        return;
+                    }
+                    
+                    try {
+                        // 直接更新数据，不创建新数组
+                        this.chart.data.datasets[0].data = this.k11Data;
+                        this.chart.data.datasets[1].data = this.k22Data;
+                        this.chart.update('none');
+                        console.log('✅ 圖表已更新');
+                    } catch (err) {
+                        console.error('❌ 圖表更新失敗:', err);
+                    }
+                },
+                
+                // 手动刷新
+                manualRefresh() {
+                    console.log('🖱️ 手動刷新');
+                    this.loadData();
+                },
+                
+                // 从API加载数据
+                async loadData() {
+                    // 防止重复
+                    if (this.isRefreshing) {
+                        console.log('⏸️ 跳過（正在刷新中）');
+                        return;
+                    }
+                    
+                    this.isRefreshing = true;
+                    console.log('🔄 開始載入...');
+                    
+                    try {
+                        const response = await fetch(this.apiUrl);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        console.log('📦 收到數據:', data);
+                        
+                        // 更新K11 - 直接赋值到固定位置
+                        if (data.k11 && Array.isArray(data.k11)) {
+                            for (let i = 0; i < 15; i++) {
+                                this.k11Data[i] = data.k11[i] || null;
+                            }
+                        }
+                        
+                        // 更新K22
+                        if (data.k22 && Array.isArray(data.k22)) {
+                            for (let i = 0; i < 15; i++) {
+                                this.k22Data[i] = data.k22[i] || null;
+                            }
+                        }
+                        
+                        // 更新图表
+                        this.updateChart();
+                        
+                        this.error = '';
+                        this.loading = false;
+                        
+                        console.log('✅ 載入成功');
+                        
+                    } catch (err) {
+                        console.error('❌ 載入失敗:', err);
+                        this.error = `${err.message}`;
+                        this.loading = false;
+                    }
+                    
+                    // 延迟释放锁
+                    setTimeout(() => {
+                        this.isRefreshing = false;
+                        console.log('🔓 已釋放鎖');
+                    }, 1000);
+                },
+                
+                // 启动自动刷新
+                startAutoRefresh() {
+                    if (this.refreshTimer) {
+                        clearInterval(this.refreshTimer);
+                    }
+                    
+                    this.refreshTimer = setInterval(() => {
+                        console.log('⏰ 自動刷新');
+                        this.loadData();
+                    }, this.refreshInterval);
+                    
+                    console.log(`⏰ 自動刷新啟動（${this.refreshInterval / 1000}秒）`);
+                },
+                
+                // 停止自动刷新
+                stopAutoRefresh() {
+                    if (this.refreshTimer) {
+                        clearInterval(this.refreshTimer);
+                        this.refreshTimer = null;
+                    }
+                },
+                goBack(){
+                    window.location.href = "hardware.html";
+                }
+            },
+            
+            async mounted() {
+                console.log('🚀 開始掛載');
+                
+                // 生成时间标签（只调用一次）
+                this.generateTimeLabels();
+                
+                // 启动时间更新
+                this.updateTime();
+                this.timeTimer = setInterval(() => this.updateTime(), 1000);
+                
+                // 加载数据
+                await this.loadData();
+                
+                // 等待DOM
+                await this.$nextTick();
+                await this.$nextTick();
+                
+                // 初始化图表
+                if (this.$refs.chartCanvas) {
+                    this.initChart();
+                    this.startAutoRefresh();
+                    console.log('📊 系統啟動完成');
+                }
+            },
+            
+            beforeUnmount() {
+                console.log('👋 開始卸載');
+                
+                this.stopAutoRefresh();
+                
+                if (this.timeTimer) {
+                    clearInterval(this.timeTimer);
+                }
+                
+                if (this.chart) {
+                    this.chart.destroy();
+                    this.chart = null;
+                }
+            }
+        });
+        
+        app.mount('#app');
+    </script>
+</body>
+</html>

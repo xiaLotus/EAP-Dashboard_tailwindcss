@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIM 系統監控看板</title>
+    <script src="static/js/vue.global.js"></script>
+    <script src="static/js/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #app { height: 100vh; display: flex; flex-direction: column; padding: 15px; gap: 12px; }
+
+        /* ── Header ── */
+        .header {
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 2px solid #30363d; padding-bottom: 10px; flex-shrink: 0;
+            position: relative;
+        }
+        .header-title {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            color: #58a6ff; font-size: 1.4rem; font-weight: 700;
+            letter-spacing: 3px; text-transform: uppercase; white-space: nowrap;
+        }
+        .header-left  { width: 160px; }
+        .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .btn-row      { display: flex; gap: 10px; }
+
+        .btn {
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 16px; border: none; border-radius: 6px;
+            font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-blue { background: linear-gradient(135deg,#58a6ff,#1f6feb); color:#fff; box-shadow:0 2px 8px rgba(88,166,255,.3); }
+        .btn-blue:hover { filter:brightness(1.15); transform:translateY(-1px); }
+        .btn-dash { background:#2563eb; color:#fff; }
+        .btn-dash:hover { background:#1d4ed8; }
+        .btn-kpi  { background:linear-gradient(135deg,#7a3300,#a04500); color:#fff; box-shadow:0 2px 8px rgba(160,80,0,.3); }
+        .btn-kpi:hover { filter:brightness(1.2); transform:translateY(-1px); }
+        .btn.spinning .spin-icon { animation: spin 1s linear infinite; display:inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .last-update { font-size: 0.72rem; color: #6a7585; }
+
+        /* ── Alert Panels ── */
+        .alert-row { display: flex; gap: 12px; flex-shrink: 0; }
+        .alert-panel {
+            flex: 1; padding: 16px; border-radius: 8px; text-align: center;
+            border: 2px solid rgba(255,255,255,0.08); transition: all 0.3s;
+        }
+        .alert-panel.bad  { background: #b91c1c; animation: pulse 2s infinite; }
+        .alert-panel.good { background: #166534; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.85} }
+        .alert-panel h3 { font-size: 1.3rem; font-weight: 900; }
+        .alert-panel p  { font-size: 0.8rem; margin-top: 4px; background: rgba(0,0,0,.2); display: inline-block; padding: 2px 10px; border-radius: 4px; }
+        .alert-badge    { display: inline-block; margin-top: 6px; background: rgba(255,255,255,.15); padding: 2px 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; }
+
+        /* ── Tables ── */
+        .tables-row { display: flex; gap: 12px; flex: 1; min-height: 0; }
+        .table-panel {
+            flex: 1; min-width: 0; background: #161b22; border: 1px solid #30363d;
+            border-radius: 8px; padding: 12px; display: flex; flex-direction: column;
+        }
+        .panel-title {
+            font-size: 1rem; color: #58a6ff; margin-bottom: 8px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .count-pill {
+            font-size: 0.75rem; background: rgba(88,166,255,.15); color: #58a6ff;
+            padding: 2px 10px; border-radius: 8px; border: 1px solid rgba(88,166,255,.25);
+        }
+        .scroll-wrap { flex: 1; overflow-y: auto; min-height: 0; }
+        .scroll-wrap::-webkit-scrollbar { width: 6px; }
+        .scroll-wrap::-webkit-scrollbar-track { background: #1c2128; }
+        .scroll-wrap::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        th { background: #21262d; color: #58a6ff; padding: 8px 10px; text-align: left; border-bottom: 2px solid #30363d; position: sticky; top: 0; }
+        td { padding: 8px 10px; border-bottom: 1px solid #21262d; color: #c9d1d9; }
+        tr:hover td { background: #1c2128; }
+        .ip-cell { color: #f0883e; font-family: monospace; font-weight: 700; }
+        .empty       { text-align: center; padding: 30px; color: #484f58; font-style: italic; }
+        .loading-msg { text-align: center; padding: 30px; color: #58a6ff; }
+
+        /* ── KPI Modal Overlay ── */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,.75); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            animation: fadeIn .2s ease;
+        }
+        @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+        @keyframes slideUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+        .modal-window {
+            width: 92vw; max-width: 1440px; height: 88vh;
+            background: #0d1117; border: 1px solid rgba(255,255,255,.07);
+            border-radius: 18px; box-shadow: 0 30px 90px rgba(0,0,0,.7);
+            overflow: hidden; display: flex; flex-direction: column;
+            animation: slideUp .25s ease;
+        }
+
+        /* Modal Header */
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; height: 64px; flex-shrink: 0;
+            background: linear-gradient(135deg,#3d1800 0%,#5a2600 60%,#6b3000 100%);
+            position: relative; overflow: hidden;
+        }
+        .modal-header::before {
+            content:''; position:absolute; inset:0;
+            background: repeating-linear-gradient(45deg,transparent,transparent 18px,rgba(255,255,255,.03) 18px,rgba(255,255,255,.03) 36px);
+        }
+        .mh-left  { display:flex; align-items:center; gap:12px; position:relative; }
+        .mh-icon  { font-size:26px; }
+        .mh-title { font-size:1rem; font-weight:900; color:#fff; letter-spacing:2px; text-transform:uppercase; }
+        .mh-sub   { font-size:0.68rem; color:rgba(255,255,255,.6); margin-top:2px; letter-spacing:1px; }
+
+        /* Date Picker */
+        .dp-wrap {
+            display:flex; align-items:center; gap:8px;
+            position:relative; z-index:1;
+        }
+        .dp-box {
+            display:flex; align-items:center; gap:8px;
+            background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.12);
+            border-radius:10px; padding:5px 14px;
+        }
+        .dp-label { font-size:0.72rem; color:rgba(255,255,255,.45); }
+        .dp-input {
+            background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+            border-radius:6px; color:#fff; font-size:0.78rem;
+            font-family:'Consolas',monospace; padding:4px 8px;
+            outline:none; cursor:pointer; transition:all .2s; color-scheme:dark;
+        }
+        .dp-input:hover { border-color:rgba(255,255,255,.28); background:rgba(255,255,255,.12); }
+        .dp-input:focus { border-color:rgba(200,120,50,.6); }
+        .dp-sep  { font-size:0.8rem; color:rgba(255,255,255,.3); }
+        .dp-days {
+            font-size:0.68rem; color:rgba(255,255,255,.4);
+            background:rgba(255,255,255,.07); padding:2px 8px;
+            border-radius:4px; min-width:36px; text-align:center;
+        }
+        .btn-reset {
+            height:32px; padding:0 14px;
+            background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+            border-radius:8px; color:#fff; font-size:0.76rem; font-weight:700;
+            cursor:pointer; transition:all .2s; white-space:nowrap;
+        }
+        .btn-reset:hover { background:rgba(255,255,255,.22); }
+        .btn-close {
+            position:relative; z-index:1;
+            width:34px; height:34px;
+            background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18);
+            border-radius:9px; color:#fff; font-size:15px; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; transition:all .2s;
+        }
+        .btn-close:hover { background:rgba(255,255,255,.22); transform:scale(1.08); }
+
+        /* Summary Strip */
+        .summary-strip {
+            display:flex; gap:1px; background:#1a1f2e;
+            border-bottom:1px solid rgba(140,70,0,.2); flex-shrink:0;
+        }
+        .summary-stat {
+            flex:1; padding:10px 14px; background:#0d1117;
+            display:flex; flex-direction:column; align-items:center; transition:background .2s;
+        }
+        .summary-stat:hover { background:#111620; }
+        .stat-val   { font-size:1.4rem; font-weight:900; font-variant-numeric:tabular-nums; color:#c07030; }
+        .stat-label { font-size:0.68rem; color:#8a9ab0; margin-top:2px; letter-spacing:.4px; }
+
+        /* Modal Body */
+        .modal-body {
+            flex:1; overflow-y:auto; overflow-x:hidden;
+            padding:16px; display:flex; flex-direction:column; gap:14px;
+        }
+        .modal-body::-webkit-scrollbar { width:6px; }
+        .modal-body::-webkit-scrollbar-track { background:transparent; }
+        .modal-body::-webkit-scrollbar-thumb { background:#30363d; border-radius:3px; }
+
+        /* Missing Dates Banner */
+        .missing-banner {
+            display:flex; align-items:center; gap:10px;
+            background:rgba(140,80,0,.12); border:1px solid rgba(140,80,0,.3);
+            border-radius:8px; padding:8px 14px; flex-shrink:0;
+        }
+        .missing-text  { font-size:0.78rem; color:#a07830; line-height:1.6; }
+        .missing-date  {
+            color:#c09040; font-family:'Consolas',monospace; font-weight:700;
+            background:rgba(180,120,0,.15); padding:1px 6px; border-radius:4px; margin:0 2px;
+        }
+
+        /* Day Section */
+        .day-section  { display:flex; flex-direction:column; gap:8px; }
+        .day-header   { display:flex; align-items:center; gap:10px; }
+        .day-label    { font-size:0.8rem; font-weight:700; color:#aa7040; letter-spacing:1px; white-space:nowrap; min-width:80px; }
+        .day-line     { flex:1; height:1px; background:linear-gradient(to right,rgba(140,80,0,.25),transparent); }
+        .day-pill     { font-size:0.68rem; color:#5a6478; background:#1a1f2e; padding:2px 10px; border-radius:12px; border:1px solid #252b3b; white-space:nowrap; }
+
+        /* Machine Grid */
+        .machine-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:8px; }
+        .machine-card {
+            background:#111620; border:1px solid #1e2535; border-radius:10px;
+            padding:10px 14px; display:flex; flex-direction:column; gap:6px;
+            transition:all .2s; position:relative; overflow:hidden;
+        }
+        .machine-card::before {
+            content:''; position:absolute; left:0;top:0;bottom:0;
+            width:3px; border-radius:0 2px 2px 0;
+        }
+        .machine-card:hover { border-color:rgba(180,90,0,.3); transform:translateY(-1px); box-shadow:0 4px 16px rgba(0,0,0,.4); }
+
+        .sev-critical::before { background:#b03030; }
+        .sev-high::before     { background:#b05828; }
+        .sev-medium::before   { background:#a08828; }
+        .sev-low::before      { background:#3a7d42; }
+
+        .card-top  { display:flex; align-items:center; justify-content:space-between; }
+        .card-name { font-size:0.8rem; font-weight:700; color:#6a9ab8; font-family:'Consolas',monospace; }
+
+        .cnt-badge    { font-size:0.74rem; font-weight:900; padding:2px 8px; border-radius:6px; font-variant-numeric:tabular-nums; }
+        .cnt-critical { background:rgba(140,40,40,.5);  color:#c96060; border:1px solid rgba(160,50,50,.5); }
+        .cnt-high     { background:rgba(140,75,30,.5);  color:#c89050; border:1px solid rgba(160,85,35,.5); }
+        .cnt-medium   { background:rgba(120,100,25,.5); color:#c8b050; border:1px solid rgba(140,115,30,.5); }
+        .cnt-low      { background:rgba(35,85,42,.5);   color:#60aa68; border:1px solid rgba(45,100,52,.5); }
+
+        .prog-bg       { height:4px; background:#1e2535; border-radius:2px; overflow:hidden; }
+        .prog-fill     { height:100%; border-radius:2px; transition:width .5s ease; }
+        .prog-critical { background:linear-gradient(to right,#8f2828,#b03535); }
+        .prog-high     { background:linear-gradient(to right,#8f4518,#b05a28); }
+        .prog-medium   { background:linear-gradient(to right,#8f7818,#a89030); }
+        .prog-low      { background:linear-gradient(to right,#286830,#388040); }
+
+        .card-time { font-size:0.68rem; color:#c9d1d9; }
+
+        /* Center / No-data */
+        .center-box { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
+        .kpi-spinner { width:32px;height:32px; border:3px solid rgba(140,60,0,.15); border-top-color:#8a4010; border-radius:50%; animation:spin .8s linear infinite; }
+
+        .no-data-box {
+            flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+            gap:12px; padding:60px 20px;
+            background:rgba(140,70,0,.07); border:1px dashed rgba(140,70,0,.25);
+            border-radius:14px;
+        }
+        .nd-icon  { font-size:2.4rem; }
+        .nd-title { font-size:1.05rem; font-weight:800; color:#c07030; letter-spacing:1px; }
+        .nd-sub   { font-size:0.8rem; color:#5a6478; }
+        .nd-hint  { font-size:0.72rem; color:#3d4a5c; background:#111620; border:1px solid #1e2535; border-radius:6px; padding:5px 14px; }
+        .btn-nd   { margin-top:6px; padding:8px 22px; background:rgba(140,70,0,.2); border:1px solid rgba(140,70,0,.35); border-radius:8px; color:#c07030; font-size:0.8rem; font-weight:700; cursor:pointer; transition:all .2s; }
+        .btn-nd:hover { background:rgba(140,70,0,.35); color:#d48040; }
+
+        /* Legend */
+        .modal-legend {
+            display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+            padding:9px 16px; background:#0d1117; border-top:1px solid #1a1f2e; flex-shrink:0;
+        }
+        .leg-label { font-size:0.68rem; color:#3d4a5c; }
+        .leg-item  { display:flex; align-items:center; gap:6px; font-size:0.7rem; color:#6a7585; }
+        .leg-dot   { width:8px;height:8px;border-radius:2px;flex-shrink:0; }
+        .leg-path  { margin-left:auto; font-size:0.68rem; color:#2d3748; }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <!-- ── Header ── -->
+    <div class="header">
+        <div class="header-left"></div>
+        <div class="header-title">CIM IP 偵測異常總攬</div>
+        <div class="header-right">
+            <div class="btn-row">
+                <button class="btn btn-kpi" @click="openKpi">⚠️ CIM KPI</button>
+                <button class="btn btn-blue" :class="{spinning:refreshing}" @click="manualRefresh" :disabled="refreshing">
+                    <span class="spin-icon">🔄</span>
+                    <span>{{ refreshing ? '更新中...' : '刷新' }}</span>
+                </button>
+                <button class="btn btn-dash" @click="goDashboard">📊 EAP Dashboard</button>
+            </div>
+            <div class="last-update" v-if="lastUpdate">最後更新：{{ lastUpdate }}</div>
+        </div>
+    </div>
+
+    <!-- ── Alert Panels ── -->
+    <div class="alert-row">
+        <div class="alert-panel" :class="deviceStatus.EAP.count>0?'bad':'good'">
+            <h3>EAP {{ deviceStatus.EAP.count>0?'斷線':'正常' }}</h3>
+            <p>{{ deviceStatus.EAP.count>0?'DISCONNECTED':'NORMAL' }}</p>
+            <div class="alert-badge">{{ deviceStatus.EAP.count }} 筆異常</div>
+        </div>
+        <div class="alert-panel" :class="deviceStatus.EQP.count>0?'bad':'good'">
+            <h3>EQP {{ deviceStatus.EQP.count>0?'斷線':'正常' }}</h3>
+            <p>{{ deviceStatus.EQP.count>0?'DISCONNECTED':'NORMAL' }}</p>
+            <div class="alert-badge">{{ deviceStatus.EQP.count }} 筆異常</div>
+        </div>
+        <div class="alert-panel" :class="deviceStatus.Switch.count>0?'bad':'good'">
+            <h3>Switch {{ deviceStatus.Switch.count>0?'斷線':'正常' }}</h3>
+            <p>{{ deviceStatus.Switch.count>0?'LINK DOWN':'NORMAL' }}</p>
+            <div class="alert-badge">{{ deviceStatus.Switch.count }} 筆異常</div>
+        </div>
+    </div>
+
+    <!-- ── Log Tables ── -->
+    <div class="tables-row">
+        <div class="table-panel" v-for="type in ['EAP','EQP','Switch']" :key="type">
+            <div class="panel-title">
+                <span>⚠️ {{ type }} 異常斷線紀錄</span>
+                <span class="count-pill">共 {{ deviceStatus[type].count }} 筆</span>
+            </div>
+            <div class="scroll-wrap">
+                <div v-if="loading" class="loading-msg">載入中...</div>
+                <div v-else-if="deviceStatus[type].data.length===0" class="empty">✅ 無異常紀錄</div>
+                <table v-else>
+                    <thead>
+                        <tr><th>時間</th><th>IP 位址</th><th>設備 ID</th><th>設備類型</th><th>位置</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item,i) in deviceStatus[type].data" :key="i">
+                            <td>{{ item.timestamp }}</td>
+                            <td class="ip-cell">{{ item.ip }}</td>
+                            <td>{{ item.machine_id }}</td>
+                            <td>{{ item.device_type }}</td>
+                            <td>{{ (item.location||'').replace(/\.csv$/i,'') }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════ KPI Modal ════ -->
+    <div v-if="showKpi" class="modal-overlay" @click.self="showKpi=false">
+        <div class="modal-window">
+
+            <!-- Header -->
+            <div class="modal-header">
+                <div class="mh-left">
+                    <span class="mh-icon">⚠️</span>
+                    <div>
+                        <div class="mh-title">CIM KPI Monitor</div>
+                        <div class="mh-sub">歷史異常電腦 · 每日斷線統計</div>
+                    </div>
+                </div>
+
+                <!-- Date Picker -->
+                <div class="dp-wrap">
+                    <div class="dp-box">
+                        <span class="dp-label">從</span>
+                        <input class="dp-input" type="date" v-model="pickerStart" :max="pickerEnd" />
+                        <span class="dp-sep">～</span>
+                        <input class="dp-input" type="date" v-model="pickerEnd"
+                               :min="pickerStart" :max="todayStr" />
+                        <span class="dp-days" v-if="dayCount>0">{{ dayCount }} 天</span>
+                    </div>
+                    <button class="btn-reset" @click="resetPicker">近 7 日</button>
+                </div>
+
+                <button class="btn-close" @click="showKpi=false">✕</button>
+            </div>
+
+            <!-- Summary Strip -->
+            <div class="summary-strip" v-if="!kpiLoading && summary">
+                <div class="summary-stat">
+                    <div class="stat-val">{{ summary.days }}</div>
+                    <div class="stat-label">統計天數</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="stat-val">{{ summary.machines }}</div>
+                    <div class="stat-label">異常機台 (不重複)</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="stat-val" style="color:#c85050">{{ summary.critical }}</div>
+                    <div class="stat-label">全天斷線 (96筆)</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="stat-val" style="color:#c88840">{{ summary.high }}</div>
+                    <div class="stat-label">半天以上斷線</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="stat-val" style="color:#b8a840">{{ summary.low }}</div>
+                    <div class="stat-label">短暫斷線</div>
+                </div>
+            </div>
+
+            <!-- Body: loading -->
+            <div class="modal-body" v-if="kpiLoading">
+                <div class="center-box">
+                    <div class="kpi-spinner"></div>
+                    <div style="color:#5a6478;font-size:.9rem">讀取歷史資料中...</div>
+                </div>
+            </div>
+
+            <!-- Body: data -->
+            <div class="modal-body" v-else>
+
+                <!-- Empty history -->
+                <div v-if="Object.keys(kpiHistory).length===0" class="center-box">
+                    <div style="font-size:2rem">📂</div>
+                    <div style="color:#484f58">尚無歷史資料</div>
+                </div>
+
+                <!-- No data in selected range -->
+                <div v-else-if="Object.keys(filtered).length===0" class="no-data-box">
+                    <div class="nd-icon">🔍</div>
+                    <div class="nd-title">查無資料</div>
+                    <div class="nd-sub">{{ pickerStart }} ～ {{ pickerEnd }} 區間內無任何異常紀錄</div>
+                    <div class="nd-hint">請確認該日期範圍內是否存在 dead_*.json 檔案</div>
+                    <button class="btn-nd" @click="resetPicker">回到近 7 日</button>
+                </div>
+
+                <!-- Data exists -->
+                <template v-else>
+
+                    <!-- Missing dates banner -->
+                    <div v-if="missingDates.length>0" class="missing-banner">
+                        <span>⚠️</span>
+                        <span class="missing-text">
+                            以下日期查無資料：
+                            <span v-for="(d,i) in missingDates" :key="d" class="missing-date">
+                                {{ d }}<span v-if="i<missingDates.length-1">、</span>
+                            </span>
+                        </span>
+                    </div>
+
+                    <!-- Day sections -->
+                    <div v-for="(items, date) in filtered" :key="date" class="day-section">
+                        <div class="day-header">
+                            <div class="day-label">📅 {{ date }}</div>
+                            <div class="day-line"></div>
+                            <div class="day-pill">{{ items.filter(p=>p.count>1).length }} 台異常</div>
+                        </div>
+                        <div class="machine-grid">
+                            <div
+                                v-for="(pc,i) in items.filter(p=>p.count>1)"
+                                :key="i"
+                                class="machine-card"
+                                :class="sev(pc.count)"
+                            >
+                                <div class="card-top">
+                                    <div class="card-name">💻 {{ pc['電腦名稱'] }}</div>
+                                    <div class="cnt-badge" :class="'cnt-'+sev(pc.count).replace('sev-','')">
+                                        {{ pc.count }} / 96
+                                    </div>
+                                </div>
+                                <div class="prog-bg">
+                                    <div
+                                        class="prog-fill"
+                                        :class="'prog-'+sev(pc.count).replace('sev-','')"
+                                        :style="{width:Math.min(100,Math.round(pc.count/96*100))+'%'}"
+                                    ></div>
+                                </div>
+                                <div class="card-time">{{ pc['當下時間'] }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </template>
+            </div>
+
+            <!-- Legend -->
+            <div class="modal-legend">
+                <span class="leg-label">嚴重度：</span>
+                <div class="leg-item"><div class="leg-dot" style="background:#b03030"></div>全天斷線 (96筆)</div>
+                <div class="leg-item"><div class="leg-dot" style="background:#b05828"></div>高頻斷線 (48-95筆)</div>
+                <div class="leg-item"><div class="leg-dot" style="background:#a08828"></div>中頻斷線 (10-47筆)</div>
+                <div class="leg-item"><div class="leg-dot" style="background:#3a7d42"></div>短暫斷線 (&lt;10筆)</div>
+                <span class="leg-path">static/source/dead_json/</span>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+const { createApp } = Vue;
+
+/* ── 獨立工具：不依賴 Vue instance ── */
+function fmt(d) {
+    const y   = d.getFullYear();
+    const m   = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+function todayFmt()    { return fmt(new Date()); }
+function sevenAgoFmt() { const d = new Date(); d.setDate(d.getDate() - 6); return fmt(d); }
+
+createApp({
+    data() {
+        return {
+            loading:    true,
+            refreshing: false,
+            lastUpdate: null,
+            deviceStatus: {
+                EAP:    { data: [], count: 0 },
+                EQP:    { data: [], count: 0 },
+                Switch: { data: [], count: 0 }
+            },
+            showKpi:     false,
+            kpiLoading:  false,
+            kpiHistory:  {},
+            pickerStart: sevenAgoFmt(),
+            pickerEnd:   todayFmt()
+        };
+    },
+
+    watch: {
+        pickerStart(val) {
+            if (!val || !this.pickerEnd) return;
+            const diff = Math.round((new Date(this.pickerEnd) - new Date(val)) / 86400000);
+            if (diff < 0) {
+                this.pickerEnd = val;
+            } else if (diff >= 7) {
+                const cap = new Date(val);
+                cap.setDate(cap.getDate() + 6);
+                const today = new Date();
+                this.pickerEnd = fmt(cap > today ? today : cap);
+            }
+        },
+        pickerEnd(val) {
+            if (!val || !this.pickerStart) return;
+            const diff = Math.round((new Date(val) - new Date(this.pickerStart)) / 86400000);
+            if (diff < 0) {
+                this.pickerStart = val;
+            } else if (diff >= 7) {
+                const cap = new Date(val);
+                cap.setDate(cap.getDate() - 6);
+                this.pickerStart = fmt(cap);
+            }
+        }
+    },
+
+    computed: {
+        todayStr() { return todayFmt(); },
+
+        dayCount() {
+            if (!this.pickerStart || !this.pickerEnd) return 0;
+            return Math.max(0,
+                Math.round((new Date(this.pickerEnd) - new Date(this.pickerStart)) / 86400000) + 1
+            );
+        },
+
+        filtered() {
+            const out = {};
+            for (const [date, items] of Object.entries(this.kpiHistory)) {
+                if (date >= this.pickerStart && date <= this.pickerEnd) out[date] = items;
+            }
+            return out;
+        },
+
+        missingDates() {
+            if (!this.pickerStart || !this.pickerEnd) return [];
+            const missing = [];
+            const cur = new Date(this.pickerStart);
+            const end = new Date(this.pickerEnd);
+            while (cur <= end) {
+                const s = fmt(cur);
+                if (!this.kpiHistory[s]) missing.push(s);
+                cur.setDate(cur.getDate() + 1);
+            }
+            return missing;
+        },
+
+        summary() {
+            const h = this.filtered;
+            if (Object.keys(h).length === 0) return null;
+            const machines = new Set();
+            let critical = 0, high = 0, low = 0;
+            for (const items of Object.values(h)) {
+                for (const pc of items) {
+                    if (pc.count <= 1) continue;
+                    machines.add(pc['電腦名稱']);
+                    if      (pc.count >= 96) critical++;
+                    else if (pc.count >= 48) high++;
+                    else                     low++;
+                }
+            }
+            return { days: Object.keys(h).length, machines: machines.size, critical, high, low };
+        }
+    },
+
+    mounted() {
+        this.fetchData();
+        setInterval(() => this.fetchData(), 900000);
+    },
+
+    methods: {
+        goDashboard() { window.location.href = 'frontend/login.html'; },
+
+        sev(count) {
+            if (count >= 96) return 'sev-critical';
+            if (count >= 48) return 'sev-high';
+            if (count >= 10) return 'sev-medium';
+            return 'sev-low';
+        },
+
+        resetPicker() {
+            this.pickerStart = sevenAgoFmt();
+            this.pickerEnd   = todayFmt();
+        },
+
+        async openKpi() {
+            this.showKpi = true;
+            if (Object.keys(this.kpiHistory).length === 0) {
+                await this.fetchKpiHistory();
+            }
+        },
+
+        async fetchKpiHistory() {
+            this.kpiLoading = true;
+            try {
+                const res = await axios.get('http://127.0.0.1:5000/api/get_dead_history');
+                this.kpiHistory = res.data;
+            } catch (e) {
+                console.error('KPI history error:', e);
+                this.kpiHistory = {};
+            } finally {
+                this.kpiLoading = false;
+            }
+        },
+
+        async fetchData() {
+            try {
+                const res  = await axios.get('http://127.0.0.1:5000/api/get_csv_data_all_index');
+                const data = res.data;
+                ['EAP', 'EQP', 'Switch'].forEach(t => {
+                    this.deviceStatus[t].data  = data[t] || [];
+                    this.deviceStatus[t].count = this.deviceStatus[t].data.length;
+                });
+                this.lastUpdate = new Date().toLocaleString('zh-TW', { hour12: false });
+            } catch (e) {
+                console.error('fetchData error:', e);
+            } finally {
+                this.loading    = false;
+                this.refreshing = false;
+            }
+        },
+
+        async manualRefresh() {
+            if (this.refreshing) return;
+            this.refreshing = true;
+            await Promise.all([this.fetchData(), this.fetchKpiHistory()]);
+        }
+    }
+
+}).mount('#app');
+</script>
+</body>
+</html>
