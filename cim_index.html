@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIM 系統監控看板</title>
+    <script src="static/js/vue.global.js"></script>
+    <script src="static/js/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            overflow: auto;
+            height: 100%;
+        }
+
+        #app { min-height: 100vh; display: flex; flex-direction: column; padding: 15px 15px 0; gap: 12px; }
+        .tables-row { display: flex; gap: 12px; height: calc((100vh - 187px) * 0.75 * 1.5 * 0.75); flex-shrink: 0; }
+        .table-panel { flex: 1; min-width: 0; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; min-height: 0; }
+        /* ── Header ── */
+        .header {
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 2px solid #30363d; padding-bottom: 10px; flex-shrink: 0;
+            position: relative;
+        }
+        .header-title {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            color: #58a6ff; font-size: 1.4rem; font-weight: 700;
+            letter-spacing: 3px; text-transform: uppercase; white-space: nowrap;
+        }
+        .header-left  { width: 160px; position: relative; }
+
+        /* ── 樓層導覽下拉 ── */
+        .nav-btn {
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 14px; border-radius: 6px; cursor: pointer;
+            font-size: 0.85rem; font-weight: 600; font-family: inherit;
+            background: linear-gradient(135deg,#1e3a5f,#1a3050);
+            color: #7ab4e8; border: 1px solid rgba(88,166,255,.25);
+            transition: all 0.2s; white-space: nowrap;
+        }
+        .nav-btn:hover { background: linear-gradient(135deg,#243f6a,#1f3860); color: #a8d0f0; border-color: rgba(88,166,255,.5); }
+        .nav-btn.open  { background: linear-gradient(135deg,#1f6feb,#1a5fd0); color: #fff; border-color: #58a6ff; }
+        .nav-dropdown {
+            position: absolute; top: calc(100% + 8px); left: 0;
+            background: #161b22; border: 1px solid #30363d;
+            border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.65);
+            z-index: 9000; display: flex; flex-direction: column;
+            min-width: 160px; animation: navFadeIn .15s ease; overflow: hidden;
+        }
+        @keyframes navFadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+        .nav-bld-bar { display: flex; flex-shrink: 0; border-bottom: 1px solid #21262d; }
+        .nav-bld-tab {
+            flex: 1; padding: 8px 10px; text-align: center;
+            font-size: 0.78rem; font-weight: 700; color: #6eaaef;
+            cursor: pointer; transition: background .12s, color .12s;
+            border-right: 1px solid #21262d; white-space: nowrap;
+        }
+        .nav-bld-tab:last-child { border-right: none; }
+        .nav-bld-tab:hover  { background: #1f2937; color: #a8d0f0; }
+        .nav-bld-tab.active { background: rgba(31,111,235,.2); color: #58a6ff; border-bottom: 2px solid #1f6feb; }
+        .nav-body { display: flex; min-height: 80px; }
+        .nav-floors { width: 130px; flex-shrink: 0; border-right: 1px solid #21262d; display: flex; flex-direction: column; }
+        .nav-floor-row {
+            display: flex; align-items: center; gap: 7px;
+            padding: 7px 12px; cursor: pointer;
+            font-size: 0.76rem; color: #c9d1d9; transition: background .12s;
+            border-bottom: 1px solid rgba(255,255,255,.04);
+        }
+        .nav-floor-row:hover  { background: #1f2937; }
+        .nav-floor-row.active { background: rgba(31,111,235,.15); color: #58a6ff; }
+        .nav-dot-ok  { width: 6px; height: 6px; border-radius: 50%; background: #43a047; flex-shrink: 0; }
+        .nav-dot-bad { width: 6px; height: 6px; border-radius: 50%; background: #e53935; flex-shrink: 0; }
+        .nav-subnets { flex: 1; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
+        .nav-subnets-hint { font-size: 0.68rem; color: #3d4a5c; display: flex; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 12px; }
+        .nav-subnet-tag {
+            display: inline-block; padding: 4px 10px; font-size: 0.72rem;
+            color: #90c2f0; background: rgba(30,70,140,.45);
+            border: 1px solid rgba(90,150,230,.3); border-radius: 5px;
+            cursor: pointer; transition: background .12s; white-space: nowrap;
+        }
+        .nav-subnet-tag:hover { background: #1f6feb; color: #fff; }
+        .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .btn-row      { display: flex; gap: 10px; }
+
+        .btn {
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 16px; border: none; border-radius: 6px;
+            font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-blue { background: linear-gradient(135deg,#58a6ff,#1f6feb); color:#fff; box-shadow:0 2px 8px rgba(88,166,255,.3); }
+        .btn-blue:hover { filter:brightness(1.15); transform:translateY(-1px); }
+        .btn-dash { background:#2563eb; color:#fff; }
+        .btn-dash:hover { background:#1d4ed8; }
+        .btn-kpi  { background:linear-gradient(135deg,#7a3300,#a04500); color:#fff; box-shadow:0 2px 8px rgba(160,80,0,.3); }
+        .btn-kpi:hover { filter:brightness(1.2); transform:translateY(-1px); }
+        .btn.spinning .spin-icon { animation: spin 1s linear infinite; display:inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .last-update { font-size: 0.72rem; color: #6a7585; }
+
+        /* ── Alert Panels ── */
+        .alert-row { display: flex; gap: 12px; flex-shrink: 0; }
+        .alert-panel {
+            flex: 1; padding: 16px; border-radius: 8px; text-align: center;
+            border: 2px solid rgba(255,255,255,0.08); transition: all 0.3s;
+        }
+        .alert-panel.bad  { background: #b91c1c; animation: pulse 2s infinite; }
+        .alert-panel.good { background: #166534; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.85} }
+        .alert-panel h3 { font-size: 1.3rem; font-weight: 900; }
+        .alert-panel p  { font-size: 0.8rem; margin-top: 4px; background: rgba(0,0,0,.2); display: inline-block; padding: 2px 10px; border-radius: 4px; }
+        .alert-badge    { display: inline-block; margin-top: 6px; background: rgba(255,255,255,.15); padding: 2px 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; }
+
+        /* ── Tables ── */
+        .tables-row-old { display: flex; gap: 12px; flex: 1; min-height: 0; }
+        .table-panel {
+            flex: 1; min-width: 0; background: #161b22; border: 1px solid #30363d;
+            border-radius: 8px; padding: 12px; display: flex; flex-direction: column;
+        }
+        .panel-title {
+            font-size: 1rem; color: #58a6ff; margin-bottom: 8px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .count-pill {
+            font-size: 0.75rem; background: rgba(88,166,255,.15); color: #58a6ff;
+            padding: 2px 10px; border-radius: 8px; border: 1px solid rgba(88,166,255,.25);
+        }
+        .scroll-wrap { flex: 1; overflow-y: auto; min-height: 0; }
+        .scroll-wrap::-webkit-scrollbar { width: 6px; }
+        .scroll-wrap::-webkit-scrollbar-track { background: #1c2128; }
+        .scroll-wrap::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        th { background: #21262d; color: #58a6ff; padding: 8px 10px; text-align: left; border-bottom: 2px solid #30363d; position: sticky; top: 0; }
+        td { padding: 8px 10px; border-bottom: 1px solid #21262d; color: #c9d1d9; }
+        tr:hover td { background: #1c2128; }
+        .ip-cell { color: #f0883e; font-family: monospace; font-weight: 700; }
+        .empty       { text-align: center; padding: 30px; color: #484f58; font-style: italic; }
+        .loading-msg { text-align: center; padding: 30px; color: #58a6ff; }
+
+        /* ── Bottom Panel ── */
+        .bottom-panel {
+            flex-shrink: 0;
+            background: #161b22;
+            border-top: 2px solid #30363d;
+            display: flex;
+            flex-direction: column;
+        }
+        .bottom-panel.tl-mode {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
+        .bp-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 14px;
+            border-bottom: 1px solid #21262d;
+            flex-shrink: 0; min-height: 38px;
+        }
+        .bp-title {
+            font-size: 0.78rem; font-weight: 700; color: #58a6ff; letter-spacing: 1px;
+        }
+        .bp-back {
+            display: flex; align-items: center; gap: 5px;
+            background: none; border: 1px solid #30363d; border-radius: 5px;
+            color: #8b949e; font-size: 0.72rem; font-family: inherit;
+            padding: 3px 10px; cursor: pointer; transition: all .15s;
+        }
+        .bp-back:hover { border-color: #58a6ff; color: #e6edf3; }
+
+        /* ── floor.html 原始 CSS ── */
+        .scene {
+          flex: 1;
+          display: flex;
+          align-items: flex-end;
+          gap: 12px;
+          min-height: 0;
+        }
+        .bld-col {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+        }
+        .floors {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          overflow-y: auto;
+        }
+        .floors::-webkit-scrollbar { display: none; }
+        .floor-chip {
+          background: rgba(58,111,216,.22);
+          border: 1px solid rgba(110,170,239,.38);
+          border-radius: 6px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          padding: 8px 6px;
+          cursor: default;
+          transition: background .18s, border-color .18s;
+          flex-shrink: 0;
+        }
+        .floor-chip:hover {
+          background: rgba(58,111,216,.35);
+          border-color: rgba(110,170,239,.6);
+        }
+        .chip-label {
+          font-size: 13px;
+          font-weight: 600;
+          color: #c8ddf2;
+          letter-spacing: .06em;
+          line-height: 1;
+        }
+        .chip-subnets {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 4px;
+        }
+        .chip-subnet-tag {
+          font-size: 11px;
+          font-weight: 500;
+          color: #90c2f0;
+          background: rgba(30,70,140,.5);
+          border: 1px solid rgba(90,150,230,.35);
+          border-radius: 5px;
+          padding: 3px 7px;
+          letter-spacing: .04em;
+          line-height: 1;
+          cursor: pointer;
+          transition: background .15s, border-color .15s, color .15s, transform .1s;
+          user-select: none;
+        }
+        .chip-subnet-tag:hover {
+          background: rgba(58,111,216,.65);
+          border-color: rgba(110,170,239,.8);
+          color: #e0f0ff;
+          transform: translateY(-1px);
+        }
+        .chip-subnet-tag.active {
+          background: #3a6fd8;
+          border-color: #6eaaef;
+          color: #fff;
+          box-shadow: 0 0 8px rgba(58,111,216,.6);
+        }
+        .sep {
+          height: 1px;
+          background: rgba(255,255,255,.25);
+          margin: 8px 0 0;
+          flex-shrink: 0;
+        }
+        .bld-name {
+          height: 42px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          font-weight: 600;
+          color: #6eaaef;
+          letter-spacing: .1em;
+          flex-shrink: 0;
+        }
+        .bld-prefix {
+          font-size: 11px;
+          font-weight: 400;
+          color: rgba(110,170,239,.55);
+          letter-spacing: .04em;
+          margin-left: 1px;
+        }
+
+        /* timeline (inline from index.html) */
+        .tl-wrap {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+        }
+        .tl-toolbar {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 10px; flex-shrink: 0;
+            background: #0d1117; border-bottom: 1px solid #21262d;
+        }
+        .tl-ctrl {
+            background: #21262d; border: 1.5px solid #30363d; color: #8b949e;
+            font-size: 10px; padding: 3px 9px; border-radius: 4px;
+            cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap;
+        }
+        .tl-ctrl:hover { border-color: #58a6ff; color: #e6edf3; }
+        .tl-ctrl.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+        .tl-search {
+            background: #21262d; border: 1.5px solid #30363d; color: #e6edf3;
+            font-size: 10px; border-radius: 4px; padding: 3px 8px;
+            font-family: inherit; outline: none; width: 140px;
+        }
+        .tl-search:focus { border-color: #58a6ff; }
+        .seg-alive { transition: opacity .1s, filter .1s; }
+        .seg-alive:hover { opacity: 1!important; filter: brightness(.85); }
+        .seg-dead { transition: opacity .1s, filter .1s; }
+        .seg-dead:hover { opacity: 1!important; filter: brightness(.85); }
+        .seg-unknown { opacity: .25; }
+
+        /* ── KPI Modal Overlay ── */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,.75); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            animation: fadeIn .2s ease;
+        }
+        @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+        @keyframes slideUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+        .modal-window {
+            width: 92vw; max-width: 1440px; height: 88vh;
+            background: #0d1117; border: 1px solid rgba(255,255,255,.07);
+            border-radius: 18px; box-shadow: 0 30px 90px rgba(0,0,0,.7);
+            overflow: hidden; display: flex; flex-direction: column;
+            animation: slideUp .25s ease;
+        }
+
+        /* Modal Header */
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; height: 64px; flex-shrink: 0;
+            background: linear-gradient(135deg,#3d1800 0%,#5a2600 60%,#6b3000 100%);
+            position: relative; overflow: hidden;
+        }
+        .modal-header::before {
+            content:''; position:absolute; inset:0;
+            background: repeating-linear-gradient(45deg,transparent,transparent 18px,rgba(255,255,255,.03) 18px,rgba(255,255,255,.03) 36px);
+        }
+        .mh-left  { display:flex; align-items:center; gap:12px; position:relative; }
+        .mh-icon  { font-size:26px; }
+        .mh-title { font-size:1rem; font-weight:900; color:#fff; letter-spacing:2px; text-transform:uppercase; }
+        .mh-sub   { font-size:0.68rem; color:rgba(255,255,255,.6); margin-top:2px; letter-spacing:1px; }
+
+        /* Date Picker */
+        .dp-wrap {
+            display:flex; align-items:center; gap:8px;
+            position:relative; z-index:1;
+        }
+        .dp-box {
+            display:flex; align-items:center; gap:8px;
+            background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.12);
+            border-radius:10px; padding:5px 14px;
+        }
+        .dp-label { font-size:0.72rem; color:rgba(255,255,255,.45); }
+        .dp-input {
+            background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+            border-radius:6px; color:#fff; font-size:0.78rem;
+            font-family:'Consolas',monospace; padding:4px 8px;
+            outline:none; cursor:pointer; transition:all .2s; color-scheme:dark;
+        }
+        .dp-input:hover { border-color:rgba(255,255,255,.28); background:rgba(255,255,255,.12); }
+        .dp-input:focus { border-color:rgba(200,120,50,.6); }
+        .dp-sep  { font-size:0.8rem; color:rgba(255,255,255,.3); }
+        .dp-days {
+            font-size:0.68rem; color:rgba(255,255,255,.4);
+            background:rgba(255,255,255,.07); padding:2px 8px;
+            border-radius:4px; min-width:36px; text-align:center;
+        }
+        .btn-reset {
+            height:32px; padding:0 14px;
+            background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+            border-radius:8px; color:#fff; font-size:0.76rem; font-weight:700;
+            cursor:pointer; transition:all .2s; white-space:nowrap;
+        }
+        .btn-reset:hover { background:rgba(255,255,255,.22); }
+        .btn-close {
+            position:relative; z-index:1;
+            width:34px; height:34px;
+            background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18);
+            border-radius:9px; color:#fff; font-size:15px; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; transition:all .2s;
+        }
+        .btn-close:hover { background:rgba(255,255,255,.22); transform:scale(1.08); }
+
+        /* Summary Strip */
+        .summary-strip {
+            display:flex; gap:1px; background:#1a1f2e;
+            border-bottom:1px solid rgba(140,70,0,.2); flex-shrink:0;
+        }
+        .summary-stat {
+            flex:1; padding:10px 14px; background:#0d1117;
+            display:flex; flex-direction:column; align-items:center; transition:background .2s;
+        }
+        .summary-stat:hover { background:#111620; }
+        .stat-val   { font-size:1.4rem; font-weight:900; font-variant-numeric:tabular-nums; color:#c07030; }
+        .stat-label { font-size:0.68rem; color:#8a9ab0; margin-top:2px; letter-spacing:.4px; }
+
+        /* Modal Body */
+        .modal-body {
+            flex:1; overflow-y:auto; overflow-x:hidden;
+            padding:16px; display:flex; flex-direction:column; gap:14px;
+        }
+        .modal-body::-webkit-scrollbar { width:6px; }
+        .modal-body::-webkit-scrollbar-track { background:transparent; }
+        .modal-body::-webkit-scrollbar-thumb { background:#30363d; border-radius:3px; }
+
+        /* Missing Dates Banner */
+        .missing-banner {
+            display:flex; align-items:center; gap:10px;
+            background:rgba(140,80,0,.12); border:1px solid rgba(140,80,0,.3);
+            border-radius:8px; padding:8px 14px; flex-shrink:0;
+        }
+        .missing-text  { font-size:0.78rem; color:#a07830; line-height:1.6; }
+        .missing-date  {
+            color:#c09040; font-family:'Consolas',monospace; font-weight:700;
+            background:rgba(180,120,0,.15); padding:1px 6px; border-radius:4px; margin:0 2px;
+        }
+
+        /* Day Section */
+        .day-section  { display:flex; flex-direction:column; gap:8px; }
+        .day-header   { display:flex; align-items:center; gap:10px; }
+        .day-label    { font-size:0.8rem; font-weight:700; color:#aa7040; letter-spacing:1px; white-space:nowrap; min-width:80px; }
+        .day-line     { flex:1; height:1px; background:linear-gradient(to right,rgba(140,80,0,.25),transparent); }
+        .day-pill     { font-size:0.68rem; color:#5a6478; background:#1a1f2e; padding:2px 10px; border-radius:12px; border:1px solid #252b3b; white-space:nowrap; }
+
+        /* Machine Grid */
+        .machine-grid { 
+            display:grid; 
+            /* grid-template-columns:repeat(auto-fill, minmax(240px,1fr));  */
+            grid-template-columns: repeat(3, 1fr); /* ✅ 固定 4 欄 */
+            gap:10px; 
+        }
+
+        .machine-card {
+            background:#111620; border:1px solid #1e2535; border-radius:10px;
+            padding:10px 14px; display:flex; flex-direction:column; gap:6px;
+            transition:all .2s; position:relative; overflow:hidden;
+        }
+        .machine-card::before {
+            content:''; position:absolute; left:0;top:0;bottom:0;
+            width:3px; border-radius:0 2px 2px 0;
+        }
+        .machine-card:hover { border-color:rgba(180,90,0,.3); transform:translateY(-1px); box-shadow:0 4px 16px rgba(0,0,0,.4); }
+
+        .sev-critical::before { background:#b03030; }
+        .sev-high::before     { background:#b05828; }
+        .sev-medium::before   { background:#a08828; }
+        .sev-low::before      { background:#3a7d42; }
+
+        .card-top  { display:flex; align-items:center; justify-content:space-between; }
+        .card-name { font-size:0.8rem; font-weight:700; color:#6a9ab8; font-family:'Consolas',monospace; }
+
+        .cnt-badge    { font-size:0.74rem; font-weight:900; padding:2px 8px; border-radius:6px; font-variant-numeric:tabular-nums; }
+        .cnt-critical { background:rgba(140,40,40,.5);  color:#c96060; border:1px solid rgba(160,50,50,.5); }
+        .cnt-high     { background:rgba(140,75,30,.5);  color:#c89050; border:1px solid rgba(160,85,35,.5); }
+        .cnt-medium   { background:rgba(120,100,25,.5); color:#c8b050; border:1px solid rgba(140,115,30,.5); }
+        .cnt-low      { background:rgba(35,85,42,.5);   color:#60aa68; border:1px solid rgba(45,100,52,.5); }
+
+        .prog-bg       { height:4px; background:#1e2535; border-radius:2px; overflow:hidden; }
+        .prog-fill     { height:100%; border-radius:2px; transition:width .5s ease; }
+        .prog-critical { background:linear-gradient(to right,#8f2828,#b03535); }
+        .prog-high     { background:linear-gradient(to right,#8f4518,#b05a28); }
+        .prog-medium   { background:linear-gradient(to right,#8f7818,#a89030); }
+        .prog-low      { background:linear-gradient(to right,#286830,#388040); }
+
+        .card-time { font-size:0.68rem; color:#c9d1d9; }
+
+        /* Center / No-data */
+        .center-box { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
+        .kpi-spinner { width:32px;height:32px; border:3px solid rgba(140,60,0,.15); border-top-color:#8a4010; border-radius:50%; animation:spin .8s linear infinite; }
+
+        .no-data-box {
+            flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+            gap:12px; padding:60px 20px;
+            background:rgba(140,70,0,.07); border:1px dashed rgba(140,70,0,.25);
+            border-radius:14px;
+        }
+        .nd-icon  { font-size:2.4rem; }
+        .nd-title { font-size:1.05rem; font-weight:800; color:#c07030; letter-spacing:1px; }
+        .nd-sub   { font-size:0.8rem; color:#5a6478; }
+        .nd-hint  { font-size:0.72rem; color:#3d4a5c; background:#111620; border:1px solid #1e2535; border-radius:6px; padding:5px 14px; }
+        .btn-nd   { margin-top:6px; padding:8px 22px; background:rgba(140,70,0,.2); border:1px solid rgba(140,70,0,.35); border-radius:8px; color:#c07030; font-size:0.8rem; font-weight:700; cursor:pointer; transition:all .2s; }
+        .btn-nd:hover { background:rgba(140,70,0,.35); color:#d48040; }
+
+        /* Legend */
+        .modal-legend {
+            display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+            padding:9px 16px; background:#0d1117; border-top:1px solid #1a1f2e; flex-shrink:0;
+        }
+        .leg-label { font-size:0.68rem; color:#3d4a5c; }
+        .leg-item  { display:flex; align-items:center; gap:6px; font-size:0.7rem; color:#6a7585; }
+        .leg-dot   { width:8px;height:8px;border-radius:2px;flex-shrink:0; }
+        .leg-path  { margin-left:auto; font-size:0.68rem; color:#2d3748; }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <!-- ── Header ── -->
+    <div class="header">
+        <div style="flex:1"></div>
+        <div class="header-title">CIM IP 偵測異常總攬</div>
+        <div class="header-right">
+            <div class="btn-row">
+                <button class="btn btn-kpi" @click="openKpi">⚠️ CIM KPI</button>
+                <button class="btn btn-blue" :class="{spinning:refreshing}" @click="manualRefresh" :disabled="refreshing">
+                    <span class="spin-icon">🔄</span>
+                    <span>{{ refreshing ? '更新中...' : '刷新' }}</span>
+                </button>
+                <button class="btn btn-dash" @click="goDashboard">📊 EAP Dashboard</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── Alert Panels ── -->
+    <div class="alert-row">
+        <div class="alert-panel" :class="deviceStatus.EAP.count>0?'bad':'good'">
+            <h3>EAP {{ deviceStatus.EAP.count>0?'斷線':'正常' }}</h3>
+            <p>{{ deviceStatus.EAP.count>0?'DISCONNECTED':'NORMAL' }}</p>
+            <div class="alert-badge">{{ deviceStatus.EAP.count }} 筆異常</div>
+        </div>
+        <div class="alert-panel" :class="deviceStatus.EQP.count>0?'bad':'good'">
+            <h3>EQP {{ deviceStatus.EQP.count>0?'斷線':'正常' }}</h3>
+            <p>{{ deviceStatus.EQP.count>0?'DISCONNECTED':'NORMAL' }}</p>
+            <div class="alert-badge">{{ deviceStatus.EQP.count }} 筆異常</div>
+        </div>
+        <div class="alert-panel" :class="deviceStatus.Switch.count>0?'bad':'good'">
+            <h3>Switch {{ deviceStatus.Switch.count>0?'斷線':'正常' }}</h3>
+            <p>{{ deviceStatus.Switch.count>0?'LINK DOWN':'NORMAL' }}</p>
+            <div class="alert-badge">{{ deviceStatus.Switch.count }} 筆異常</div>
+        </div>
+    </div>
+
+    <!-- ── Log Tables ── -->
+    <div class="tables-row">
+        <div class="table-panel" v-for="type in ['EAP','EQP','Switch']" :key="type">
+            <div class="panel-title">
+                <span>⚠️ {{ type }} 異常斷線紀錄</span>
+                <span class="count-pill">共 {{ deviceStatus[type].count }} 筆</span>
+            </div>
+            <div class="scroll-wrap">
+                <div v-if="loading" class="loading-msg">載入中...</div>
+                <div v-else-if="deviceStatus[type].data.length===0" class="empty">✅ 無異常紀錄</div>
+                <table v-else>
+                    <thead>
+                        <tr><th>時間</th><th>IP 位址</th><th>設備 ID</th><th>設備類型</th><th>位置</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item,i) in deviceStatus[type].data" :key="i">
+                            <td>{{ item.timestamp }}</td>
+                            <td class="ip-cell">{{ item.ip }}</td>
+                            <td>{{ item.machine_id }}</td>
+                            <td>{{ item.device_type }}</td>
+                            <td>{{ (item.location||'').replace(/\.csv$/i,'') }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════ Bottom Panel ════ -->
+    <div class="bottom-panel" :class="{'tl-mode': tlSubnet}" ref="bottomPanel">
+
+        <!-- Header bar -->
+        <div class="bp-header">
+            <span class="bp-title">{{ tlSubnet ? '⏱ 時序圖' : '🏢 棟別/樓層' }}</span>
+            <button v-if="tlSubnet" class="bp-back" @click="tlSubnet=null; tlDevs=[]; tlErr=''">← 返回樓層</button>
+            <template v-if="tlSubnet">
+                <span style="font-size:0.72rem;color:#f0f6fc;font-weight:600;margin-left:4px">{{ tlSubnet }}</span>
+                <input v-model="tlSearch" class="tl-search" placeholder="搜尋 IP / 設備...">
+                <div style="display:flex;align-items:center;gap:3px;margin-left:auto">
+                    <button @click="tlZoom(1.6)"   class="tl-ctrl">＋</button>
+                    <button @click="tlZoom(1/1.6)" class="tl-ctrl">－</button>
+                    <button @click="tlReset"        class="tl-ctrl" style="color:#58a6ff">全覽</button>
+                </div>
+                <div style="font-size:10px;display:flex;align-items:center;gap:5px;flex-shrink:0">
+                    <span v-if="tlLoading2" style="color:#f57c00">⟳ 載入...</span>
+                    <template v-else>
+                        <span style="color:#2e7d32;font-weight:500">● {{ tlAlive }}</span>
+                        <span style="color:#c62828;font-weight:500">● {{ tlDead }}</span>
+                        <span style="color:#c9d1d9">│ {{ tlDevs.length }} 台</span>
+                    </template>
+                </div>
+            </template>
+        </div>
+
+        <!-- Floor view (from floor.html) -->
+        <div style="flex:1;padding:12px 14px 8px;font-family:'IBM Plex Mono',monospace;" v-if="!tlSubnet">
+            <div v-if="flLoading" style="color:#484f58;font-size:0.75rem">載入中...</div>
+            <div v-else-if="flErr" style="color:#f87171;font-size:0.75rem">{{ flErr }}</div>
+            <div class="scene" v-else>
+                <div class="bld-col" v-for="bld in flBuildings" :key="bld.id">
+                    <div class="floors">
+                        <div class="floor-chip"
+                             :class="{'chip-other': bld.id === '其他'}"
+                             @click="bld.id === '其他' && loadGroup('10', '其他')"
+                             v-for="f in bld.floorsDesc" :key="f.name">
+                            <span class="chip-label">{{ f.name }}</span>
+                            <div class="chip-subnets" v-if="f.subnets && f.subnets.length && bld.id !== '其他'">
+                                <span class="chip-subnet-tag"
+                                      v-for="s in f.subnets" :key="s"
+                                      @click.stop="loadSubnet(f.subnetPrefix + '.' + s)">{{ s }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sep"></div>
+                    <div class="bld-name">
+                        <span>{{ bld.id }}<span class="bld-prefix" v-if="bld.bldOctet">({{ bld.bldOctet }})</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline view -->
+        <div class="tl-wrap" v-else>
+            <div v-if="tlLoading2" style="padding:20px;text-align:center;color:#8b949e;font-size:0.75rem">⟳ 載入中...</div>
+            <div v-else-if="tlErr" style="padding:20px;text-align:center;color:#f87171;font-size:0.75rem">{{ tlErr }}</div>
+            <div v-else
+                 :style="{cursor: tlDrag ? 'grabbing' : 'grab', userSelect: 'none'}"
+                 @mousedown.prevent="tlDragStart"
+                 @mousemove="tlDragMove"
+                 @mouseup="tlDragEnd"
+                 @mouseleave="tlDragEnd"
+                 @wheel="tlOnWheel">
+                <div :style="{width:(tlLW+tlTW)+'px',minWidth:'100%'}">
+                        <!-- Time axis -->
+                        <div style="position:sticky;top:0;z-index:20;display:flex;height:40px;background:#161b22;border-bottom:1.5px solid #30363d;box-shadow:0 2px 8px rgba(0,0,0,.4)">
+                            <div :style="{width:tlLW+'px',flexShrink:0,background:'#161b22',borderRight:'1.5px solid #30363d',display:'flex',alignItems:'center',padding:'0 10px'}">
+                                <span style="font-size:10px;color:#c9d1d9;letter-spacing:.08em">.HOST / DEVICE</span>
+                            </div>
+                            <div :style="{width:tlTW+'px',flexShrink:0,position:'relative',overflow:'visible',background:'#0d1117'}">
+                                <div v-for="tk in tlMajorTicks" :key="'al'+tk.ms"
+                                     :style="{position:'absolute',left:tk.x+'px',top:0,bottom:0,width:'1px',background:'rgba(48,54,61,.6)',pointerEvents:'none'}"></div>
+                                <div v-for="tk in tlTimeTicks" :key="tk.ms"
+                                     :style="{position:'absolute',left:tk.x+'px',top:0,bottom:0,display:'flex',flexDirection:'column',justifyContent:'flex-end',paddingBottom:'3px',pointerEvents:'none'}">
+                                    <div :style="{width:'1px',height:tk.major?'10px':'4px',background:tk.major?'#58a6ff':'#21262d',marginBottom:'2px'}"></div>
+                                    <span v-if="tk.label" style="font-size:10px;color:#c9d1d9;white-space:nowrap;transform:translateX(-50%);display:block;font-weight:500">{{ tk.label }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Rows: all rendered, no virtual scroll -->
+                        <div v-for="(dev, idx) in tlFiltered" :key="dev.ip"
+                             :style="{height:tlRH+'px',display:'flex',alignItems:'stretch'}"
+                             :class="idx%2===0?'row-even':'row-odd'">
+                            <div :style="{width:tlLW+'px',flexShrink:0,borderRight:'1.5px solid #21262d',display:'flex',alignItems:'center',padding:'0 8px',gap:'5px'}">
+                                <span :style="{width:'8px',height:'8px',borderRadius:'50%',flexShrink:0,background:dev.lastStatus==='alive'?'#43a047':dev.lastStatus==='dead'?'#e53935':'#b0bec5'}"></span>
+                                <div style="overflow:hidden;flex:1">
+                                    <div style="font-size:13px;color:#58a6ff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ dev.ip }}</div>
+                                    <div style="font-size:11px;color:#f0f6fc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ dev.dn||dev.mid||'—' }}</div>
+                                </div>
+                                <span style="font-size:9px;color:#78909c;flex-shrink:0">{{ dev.tp }}</span>
+                            </div>
+                            <div :style="{width:tlTW+'px',flexShrink:0,position:'relative',overflow:'hidden'}">
+                                <div v-for="tk in tlMajorTicks" :key="'gl'+tk.ms"
+                                     :style="{position:'absolute',left:tk.x+'px',top:0,bottom:0,width:'1px',background:'rgba(48,54,61,.8)',pointerEvents:'none'}"></div>
+                                <div v-for="(seg,si) in dev.segs" :key="si"
+                                     :class="seg.v==='alive'?'seg-alive':seg.v==='dead'?'seg-dead':'seg-unknown'"
+                                     :style="tlSegStyle(seg,si,dev.segs.length)"
+                                     @mouseenter="tlShowTip($event,dev,seg)"
+                                     @mouseleave="tlTip.show=false"></div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+        </div>
+
+        <!-- Tooltip -->
+        <div v-show="tlTip.show"
+             :style="{position:'fixed',left:tlTip.x+'px',top:tlTip.y+'px',background:'#161b22',border:'1.5px solid #30363d',borderRadius:'8px',padding:'8px 12px',pointerEvents:'none',zIndex:9998,boxShadow:'0 8px 24px rgba(0,0,0,.4)',minWidth:'180px',fontSize:'10px'}">
+            <div style="color:#1565c0;font-weight:600;font-size:11px">{{ tlTip.ip }}</div>
+            <div style="color:#90a4ae;font-size:9px;margin-bottom:4px">{{ tlTip.mid }}</div>
+            <div style="display:flex;align-items:center;gap:5px">
+                <span :style="{width:'8px',height:'8px',borderRadius:'50%',background:tlTip.status==='alive'?'#43a047':'#e53935'}"></span>
+                <span :style="{color:tlTip.status==='alive'?'#2e7d32':'#c62828',fontWeight:600}">{{ tlTip.status==='alive'?'ONLINE':'OFFLINE' }}</span>
+            </div>
+            <div style="border-top:1px solid #21262d;margin-top:5px;padding-top:5px">
+                <div style="color:#c9d1d9;font-size:9px">▶ {{ tlTip.start }}</div>
+                <div style="color:#c9d1d9;font-size:9px">■ {{ tlTip.end }}</div>
+                <div style="color:#90a4ae;font-size:9px">⏱ {{ tlTip.dur }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════ KPI Modal ════ -->
+    <div v-if="showKpi" class="modal-overlay" @click.self="showKpi=false">
+        <div class="modal-window">
+
+            <!-- Header -->
+            <div class="modal-header">
+                <div class="mh-left">
+                    <span class="mh-icon">⚠️</span>
+                    <div>
+                        <div class="mh-title">CIM KPI Monitor</div>
+                        <div class="mh-sub">歷史異常電腦 · 每日斷線統計</div>
+                    </div>
+                </div>
+
+                <!-- Date Picker -->
+                <div class="dp-wrap">
+                    <div class="dp-box">
+                        <span class="dp-label">從</span>
+                        <input class="dp-input" type="date" v-model="pickerStart" :max="pickerEnd" />
+                        <span class="dp-sep">～</span>
+                        <input class="dp-input" type="date" v-model="pickerEnd"
+                               :min="pickerStart" :max="todayStr" />
+                        <span class="dp-days" v-if="dayCount>0">{{ dayCount }} 天</span>
+                    </div>
+                    <button class="btn-reset" @click="resetPicker">近 7 日</button>
+                </div>
+
+                <button class="btn-close" @click="showKpi=false">✕</button>
+            </div>
+
+            <!-- Summary Strip -->
+            <div class="summary-strip" v-if="!kpiLoading && summary">
+                <div class="summary-stat">
+                    <div class="stat-val">{{ summary.days }}</div>
+                    <div class="stat-label">統計天數</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="stat-val">{{ summary.machines }}</div>
+                    <div class="stat-label">異常機台 (不重複)</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="stat-val" style="color:#c85050">{{ summary.critical }}</div>
+                    <div class="stat-label">全天斷線 (96筆)</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="stat-val" style="color:#c88840">{{ summary.high }}</div>
+                    <div class="stat-label">半天以上斷線</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="stat-val" style="color:#b8a840">{{ summary.low }}</div>
+                    <div class="stat-label">短暫斷線</div>
+                </div>
+            </div>
+
+            <!-- Body: loading -->
+            <div class="modal-body" v-if="kpiLoading">
+                <div class="center-box">
+                    <div class="kpi-spinner"></div>
+                    <div style="color:#5a6478;font-size:.9rem">讀取歷史資料中...</div>
+                </div>
+            </div>
+
+            <!-- Body: data -->
+            <div class="modal-body" v-else>
+
+                <!-- Empty history -->
+                <div v-if="Object.keys(kpiHistory).length===0" class="center-box">
+                    <div style="font-size:2rem">📂</div>
+                    <div style="color:#484f58">尚無歷史資料</div>
+                </div>
+
+                <!-- No data in selected range -->
+                <div v-else-if="Object.keys(filtered).length===0" class="no-data-box">
+                    <div class="nd-icon">🔍</div>
+                    <div class="nd-title">查無資料</div>
+                    <div class="nd-sub">{{ pickerStart }} ～ {{ pickerEnd }} 區間內無任何異常紀錄</div>
+                    <div class="nd-hint">請確認該日期範圍內是否存在 dead_*.json 檔案</div>
+                    <button class="btn-nd" @click="resetPicker">回到近 7 日</button>
+                </div>
+
+                <!-- Data exists -->
+                <template v-else>
+
+                    <!-- Missing dates banner -->
+                    <div v-if="missingDates.length>0" class="missing-banner">
+                        <span>⚠️</span>
+                        <span class="missing-text">
+                            以下日期查無資料：
+                            <span v-for="(d,i) in missingDates" :key="d" class="missing-date">
+                                {{ d }}<span v-if="i<missingDates.length-1">、</span>
+                            </span>
+                        </span>
+                    </div>
+
+                    <!-- Day sections -->
+                    <div v-for="(items, date) in filtered" :key="date" class="day-section">
+                        <div class="day-header">
+                            <div class="day-label">📅 {{ date }}</div>
+                            <div class="day-line"></div>
+                            <div class="day-pill">{{ items.filter(p=>p.count>1).length }} 台異常</div>
+                        </div>
+                        <div class="machine-grid">
+                            <div
+                                v-for="(pc,i) in items.filter(p=>p.count>1)"
+                                :key="i"
+                                class="machine-card"
+                                :class="sev(pc.count)"
+                            >
+                                <div class="card-top">
+                                    <div class="card-name">💻 {{ pc['電腦名稱'] }}</div>
+                                <!-- ✅ 無論有無值都顯示，空值時 fallback -->
+                                    <div  v-if="pc['所在區域(柱位)'] && pc['所在區域(柱位)'].trim() !== ''"
+                                        style="
+                                            font-size:0.68rem;
+                                            color:#ffffff;
+                                            display:flex;
+                                            align-items:center;
+                                            gap:6px;
+                                            font-family:'Consolas', monospace;
+                                            margin-top:2px;
+                                            white-space: nowrap;
+                                            overflow: hidden;
+                                            text-overflow: ellipsis;
+                                            max-width: 60%;
+                                        "
+                                        :title="pc['所在區域(柱位)']"
+                                    >
+                                        📍 {{ pc['所在區域(柱位)'] }}
+                                    </div>
+                                    <div class="cnt-badge" :class="'cnt-'+sev(pc.count).replace('sev-','')">
+                                        {{ pc.count }} / 96
+                                    </div>
+                                </div>
+                                <div class="prog-bg">
+                                    <div
+                                        class="prog-fill"
+                                        :class="'prog-'+sev(pc.count).replace('sev-','')"
+                                        :style="{width:Math.min(100,Math.round(pc.count/96*100))+'%'}"
+                                    ></div>
+                                </div>
+                                <div class="card-time">{{ pc['當下時間'] }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </template>
+            </div>
+
+            <!-- Legend -->
+            <div class="modal-legend">
+                <span class="leg-label">嚴重度：</span>
+                <div class="leg-item"><div class="leg-dot" style="background:#b03030"></div>全天斷線 (96筆)</div>
+                <div class="leg-item"><div class="leg-dot" style="background:#b05828"></div>高頻斷線 (48-95筆)</div>
+                <div class="leg-item"><div class="leg-dot" style="background:#a08828"></div>中頻斷線 (10-47筆)</div>
+                <div class="leg-item"><div class="leg-dot" style="background:#3a7d42"></div>短暫斷線 (&lt;10筆)</div>
+                <span class="leg-path">static/source/dead_json/</span>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+const { createApp } = Vue;
+
+/* ── 獨立工具：不依賴 Vue instance ── */
+function fmt(d) {
+    const y   = d.getFullYear();
+    const m   = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+function todayFmt()    { return fmt(new Date()); }
+function sevenAgoFmt() { const d = new Date(); d.setDate(d.getDate() - 6); return fmt(d); }
+
+createApp({
+    data() {
+        return {
+            loading:    true,
+            refreshing: false,
+            lastUpdate: null,
+            deviceStatus: {
+                EAP:    { data: [], count: 0 },
+                EQP:    { data: [], count: 0 },
+                Switch: { data: [], count: 0 }
+            },
+            showKpi:     false,
+            // ── Bottom panel ──
+            flBuildings: [], flLoading: false, flErr: '',
+            tlSubnet: null, tlDevs: [], tlLoading2: false, tlErr: '',
+            tlSearch: '', tlTMin: 0, tlTMax: 0, tlVMin: 0, tlVMax: 0,
+            tlLW: 280, tlTW: 800, tlRH: 44, tlScrollTop: 0, tlContH: 200,
+            tlDrag: null,
+            tlTip: { show: false, ip: '', mid: '', tp: '', status: '', start: '', end: '', dur: '', x: 0, y: 0 },
+            navOpen: false,
+            navLoading: false,
+            navBuildings: [],
+            navActiveBld: null,
+            navActiveFloor: null,
+            kpiLoading:  false,
+            kpiHistory:  {},
+            pickerStart: sevenAgoFmt(),
+            pickerEnd:   todayFmt()
+        };
+    },
+
+    watch: {
+        pickerStart(val) {
+            if (!val || !this.pickerEnd) return;
+            const diff = Math.round((new Date(this.pickerEnd) - new Date(val)) / 86400000);
+            if (diff < 0) {
+                this.pickerEnd = val;
+            } else if (diff >= 7) {
+                const cap = new Date(val);
+                cap.setDate(cap.getDate() + 6);
+                const today = new Date();
+                this.pickerEnd = fmt(cap > today ? today : cap);
+            }
+        },
+        pickerEnd(val) {
+            if (!val || !this.pickerStart) return;
+            const diff = Math.round((new Date(val) - new Date(this.pickerStart)) / 86400000);
+            if (diff < 0) {
+                this.pickerStart = val;
+            } else if (diff >= 7) {
+                const cap = new Date(val);
+                cap.setDate(cap.getDate() - 6);
+                this.pickerStart = fmt(cap);
+            }
+        }
+    },
+
+    computed: {
+        todayStr() { return todayFmt(); },
+
+        // ── Timeline computed ──
+        tlRange()  { return this.tlVMax - this.tlVMin || 1; },
+        tlFiltered() {
+            const q = this.tlSearch.toLowerCase();
+            if (!q) return this.tlDevs;
+            return this.tlDevs.filter(d => d.ip.includes(q) || (d.dn||'').toLowerCase().includes(q) || (d.mid||'').toLowerCase().includes(q));
+        },
+        // 虛擬捲動
+        tlStartIdx() { return Math.max(0, Math.floor(this.tlScrollTop / this.tlRH) - 8); },
+        tlVisCount() { return Math.ceil(this.tlContH / this.tlRH) + 20; },
+        tlVisibleRows() {
+            return this.tlFiltered.slice(this.tlStartIdx, this.tlStartIdx + this.tlVisCount)
+                .map((d, i) => ({ ...d, _idx: this.tlStartIdx + i }));
+        },
+        tlTopPad() { return this.tlStartIdx * this.tlRH; },
+        tlBotPad() {
+            const r = this.tlStartIdx + this.tlVisibleRows.length;
+            return Math.max(0, (this.tlFiltered.length - r) * this.tlRH);
+        },
+        tlAlive()  { return this.tlDevs.filter(d => d.lastStatus === 'alive').length; },
+        tlDead()   { return this.tlDevs.filter(d => d.lastStatus === 'dead').length; },
+        tlTimeTicks() {
+            if (!this.tlTW || !this.tlRange) return [];
+            const hr = this.tlRange / 3.6e6;
+            const [mn, mj] = hr <= 1 ? [300e3, 1800e3] : hr <= 3 ? [600e3, 3600e3] :
+                             hr <= 8 ? [1800e3, 7200e3] : hr <= 24 ? [3600e3, 14400e3] :
+                             hr <= 72 ? [7200e3, 28800e3] : [14400e3, 86400e3];
+            const ticks = []; let t = Math.ceil(this.tlVMin / mn) * mn;
+            while (t <= this.tlVMax) {
+                const x = (t - this.tlVMin) / this.tlRange * this.tlTW, isMajor = Math.round(t % mj) === 0;
+                let label = '';
+                if (isMajor) { const d = new Date(t), hh = String(d.getHours()).padStart(2,'0'), mm = String(d.getMinutes()).padStart(2,'0'); label = hr > 24 ? `${d.getMonth()+1}/${d.getDate()} ${hh}h` : `${hh}:${mm}`; }
+                ticks.push({ ms: t, x, major: isMajor, label }); t += mn;
+            }
+            return ticks;
+        },
+        tlMajorTicks() { return this.tlTimeTicks.filter(t => t.major); },
+
+        navCurrentFloors() {
+            const bld = this.navBuildings.find(b => b.id === this.navActiveBld);
+            return bld ? bld.floors : [];
+        },
+
+        dayCount() {
+            if (!this.pickerStart || !this.pickerEnd) return 0;
+            return Math.max(0,
+                Math.round((new Date(this.pickerEnd) - new Date(this.pickerStart)) / 86400000) + 1
+            );
+        },
+
+        // filtered() {
+        //     const out = {};
+        //     for (const [date, items] of Object.entries(this.kpiHistory)) {
+        //         if (date >= this.pickerStart && date <= this.pickerEnd) out[date] = items;
+        //     }
+        //     return out;
+        // },
+
+        filtered() {
+            const out = {};  // 📦 準備一個空物件，最後要回傳給 Vue 模板
+            
+            // 🔄 步驟 1：把物件轉成 [key, value] 陣列
+            // 例如：{ '2026-05-12': [...], '2026-05-13': [...] }
+            // 變成：[ ['2026-05-12', [...]], ['2026-05-13', [...]] ]
+            const sorted = Object.entries(this.kpiHistory)
+                
+                // 🔍 步驟 2：過濾日期範圍（只保留 pickerStart ~ pickerEnd 之間的資料）
+                // [date, items] 是解構賦值，date 是鍵名（如 '2026-05-12'），items 是該日的機台陣列
+                .filter(([date]) => date >= this.pickerStart && date <= this.pickerEnd)
+                
+                // 📅 步驟 3：日期排序（由新→舊）
+                // a[0] 和 b[0] 都是日期字串，localeCompare 會依字典序比較
+                // b[0].localeCompare(a[0]) → 大的排前面 → 新日期在前
+                .sort((a, b) => b[0].localeCompare(a[0])); 
+            
+            // 🔁 步驟 4：把排序好的陣列「還原」成物件格式
+            // Vue 的 v-for 可以遍歷物件：v-for="(items, date) in filtered"
+            for (const [date, items] of sorted) {
+                out[date] = items;
+            }
+            
+            return out;  // ✅ 回傳 { '2026-05-14': [...], '2026-05-13': [...], ... }
+        },
+
+        missingDates() {
+            if (!this.pickerStart || !this.pickerEnd) return [];
+            const missing = [];
+            const cur = new Date(this.pickerStart);
+            const end = new Date(this.pickerEnd);
+            while (cur <= end) {
+                const s = fmt(cur);
+                if (!this.kpiHistory[s]) missing.push(s);
+                cur.setDate(cur.getDate() + 1);
+            }
+            return missing;
+        },
+
+        summary() {
+            const h = this.filtered;
+            if (Object.keys(h).length === 0) return null;
+            const machines = new Set();
+            let critical = 0, high = 0, low = 0;
+            for (const items of Object.values(h)) {
+                for (const pc of items) {
+                    if (pc.count <= 1) continue;
+                    machines.add(pc['電腦名稱']);
+                    if      (pc.count >= 96) critical++;
+                    else if (pc.count >= 48) high++;
+                    else                     low++;
+                }
+            }
+            return { days: Object.keys(h).length, machines: machines.size, critical, high, low };
+        }
+    },
+
+    mounted() {
+        this.fetchData();
+        this.fetchFloor();
+        setInterval(() => this.fetchData(), 900000);
+        window.addEventListener('resize', () => { this.tlUpdateTW(); this.tlUpdateContH(); });
+    },
+
+    methods: {
+        goDashboard() { window.location.href = 'frontend/login.html'; },
+
+        // ── Bottom panel: floor ──
+        async fetchFloor() {
+            this.flLoading = true; this.flErr = '';
+            try {
+                const res = await axios.get('http://127.0.0.1:5000/api/building_floor_status');
+                const BLD_ORDER = ['K11', 'K18', 'K21', 'K22', 'K25', '其他'];
+                this.flBuildings = (res.data.buildings || [])
+                    .sort((a, b) => BLD_ORDER.indexOf(a.id) - BLD_ORDER.indexOf(b.id))
+                    .map(b => ({
+                        ...b,
+                        floorsDesc: [...b.floors]
+                            .sort((a, z) => { const n = s => parseInt(s.replace(/\D/g,''))||999; return n(z.name) - n(a.name); })
+                            .map(f => ({ ...f, subnetPrefix: f.subnet_prefix || '' }))
+                    }));
+            } catch (e) { this.flErr = '無法取得樓層資料'; }
+            finally { this.flLoading = false; }
+        },
+
+        async loadGroup(prefix, label) {
+            const sy = window.scrollY;
+            this.tlSubnet = label; this.tlDevs = []; this.tlErr = ''; this.tlLoading2 = true;
+            try {
+                const res = await axios.get(`http://127.0.0.1:5000/api/tl/data?prefix=${prefix}&changed_only=0`);
+                const parseMs = s => s ? new Date(s.replace(' ','T')).getTime() : 0;
+                this.tlTMin = parseMs(res.data.tmin); this.tlTMax = parseMs(res.data.tmax);
+                const now = Date.now();
+                this.tlVMax = Math.max(this.tlTMax, now);
+                this.tlVMin = this.tlVMax - Math.min(7*24*3600*1000, this.tlVMax - this.tlTMin);
+                this.tlDevs = (res.data.devs || []).map(d => {
+                    const l = d.segs[d.segs.length - 1];
+                    return { ...d, lastStatus: l ? l.v : 'alive' };
+                });
+                this.$nextTick(() => requestAnimationFrame(() => {
+                    this.tlUpdateTW();
+                    this.tlUpdateContH();
+                    window.scrollTo({ top: sy, behavior: 'instant' });
+                    if (this.$refs.bottomPanel) this.$refs.bottomPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }));
+            } catch (e) { this.tlErr = `載入失敗: ${e.message}`; }
+            finally { this.tlLoading2 = false; }
+        },
+
+        async loadSubnet(subnet) {
+            const sy = window.scrollY;
+            this.tlSubnet = subnet; this.tlDevs = []; this.tlErr = ''; this.tlLoading2 = true;
+            try {
+                const res = await axios.get(`http://127.0.0.1:5000/api/tl/subnet_grid?subnet=${encodeURIComponent(subnet)}`);
+                const parseMs = s => s ? new Date(s.replace(' ','T')).getTime() : 0;
+                this.tlTMin = parseMs(res.data.tmin); this.tlTMax = parseMs(res.data.tmax);
+                const now = Date.now();
+                this.tlVMax = Math.max(this.tlTMax, now);
+                this.tlVMin = this.tlVMax - Math.min(7*24*3600*1000, this.tlVMax - this.tlTMin);
+                this.tlDevs = (res.data.devs || []).map(d => {
+                    const l = d.segs[d.segs.length - 1];
+                    return { ...d, lastStatus: l ? l.v : 'alive' };
+                });
+                this.$nextTick(() => requestAnimationFrame(() => {
+                    this.tlUpdateTW();
+                    this.tlUpdateContH();
+                    window.scrollTo({ top: sy, behavior: 'instant' });
+                    if (this.$refs.bottomPanel) this.$refs.bottomPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }));
+            } catch (e) { this.tlErr = `載入失敗: ${e.message}`; }
+            finally { this.tlLoading2 = false; }
+        },
+
+        tlUpdateTW()    { this.tlTW = Math.max(400, window.innerWidth - this.tlLW - 40); },
+        tlUpdateContH() { if (this.$refs.tlScroller) this.tlContH = this.$refs.tlScroller.clientHeight; },
+
+        tlSegStyle(seg, si, total) {
+            const parseMs = s => s ? new Date(s.replace(' ','T')).getTime() : 0;
+            const sMs = parseMs(seg.s), eMs = seg.e ? parseMs(seg.e) : this.tlTMax;
+            const effS = si === 0 ? Math.min(sMs, this.tlVMin) : sMs;
+            const effE = si === total - 1 ? Math.max(eMs, this.tlVMax) : eMs;
+            if (effE <= this.tlVMin || effS >= this.tlVMax) return { display: 'none' };
+            const x = Math.max(0, (effS - this.tlVMin) / this.tlRange * this.tlTW);
+            const endX = Math.min(this.tlTW, (effE - this.tlVMin) / this.tlRange * this.tlTW);
+            const w = Math.max(2, endX - x);
+            const col = seg.v === 'alive' ? 'rgba(67,160,71,.75)' : seg.v === 'dead' ? 'rgba(229,57,53,.88)' : 'rgba(176,190,197,.4)';
+            return { position: 'absolute', left: x+'px', width: w+'px', top: '5px', bottom: '5px', borderRadius: '3px', background: col, pointerEvents: 'auto' };
+        },
+
+        tlShowTip(e, dev, seg) {
+            const parseMs = s => s ? new Date(s.replace(' ','T')).getTime() : 0;
+            const durStr = ms => { if(ms<=0)return'0秒'; const s=Math.floor(ms/1000); if(s<60)return s+'秒'; const m=Math.floor(s/60); if(m<60)return m+'分'+(s%60)+'秒'; return Math.floor(m/60)+'時'+(m%60)+'分'; };
+            const fmtTs = ms => { const d=new Date(ms),p=n=>String(n).padStart(2,'0'); return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
+            const sMs = parseMs(seg.s), eMs = seg.e ? parseMs(seg.e) : this.tlTMax;
+            this.tlTip = { show: true, ip: dev.ip, mid: dev.dn||dev.mid||'', tp: dev.tp||'', status: seg.v,
+                start: fmtTs(sMs), end: seg.e ? fmtTs(eMs) : '—', dur: durStr(eMs - sMs),
+                x: Math.min(e.clientX+14, window.innerWidth-220), y: Math.min(e.clientY+14, window.innerHeight-120) };
+        },
+
+        tlZoom(f) {
+            const now = Date.now(), mid = (this.tlVMin + this.tlVMax) / 2, half = (this.tlVMax - this.tlVMin) / 2;
+            const nh = Math.max(60000, half / f);
+            this.tlVMax = Math.min(mid + nh, now); this.tlVMin = this.tlVMax - nh * 2;
+        },
+        tlReset() {
+            const now = Date.now(); this.tlVMax = Math.max(this.tlTMax, now);
+            this.tlVMin = this.tlVMax - Math.min(7*24*3600*1000, this.tlVMax - this.tlTMin);
+        },
+        tlOnWheel(e) {
+            const now = Date.now();
+            if (e.ctrlKey) {
+                e.preventDefault();
+                const f = e.deltaY < 0 ? 1.25 : 0.8, nr = Math.max(60000, this.tlRange / f);
+                const ratio = 0.5, pivot = this.tlVMin + ratio * this.tlRange;
+                this.tlVMin = pivot - ratio * nr; this.tlVMax = Math.min(this.tlVMin + nr, now);
+            } else if (e.shiftKey) {
+                e.preventDefault();
+                const shift = this.tlRange * .15 * Math.sign(e.deltaY);
+                let nMax = this.tlVMax + shift, nMin = this.tlVMin + shift;
+                if (nMax > now) { nMax = now; nMin = now - (this.tlVMax - this.tlVMin); }
+                if (nMin < this.tlTMin) { nMin = this.tlTMin; nMax = nMin + (this.tlVMax - this.tlVMin); }
+                this.tlVMin = nMin; this.tlVMax = nMax;
+            }
+            // 其他情況讓瀏覽器正常垂直捲動
+        },
+        tlDragStart(e) {
+            this.tlDrag = { startX: e.clientX, startVmin: this.tlVMin, startVmax: this.tlVMax };
+        },
+        tlDragMove(e) {
+            if (!this.tlDrag) return;
+            const now = Date.now(), dx = e.clientX - this.tlDrag.startX;
+            const dtMs = -(dx / this.tlTW) * this.tlRange, span = this.tlDrag.startVmax - this.tlDrag.startVmin;
+            let nMin = this.tlDrag.startVmin + dtMs, nMax = nMin + span;
+            if (nMax > now) { nMax = now; nMin = now - span; }
+            if (nMin < this.tlTMin) { nMin = this.tlTMin; nMax = nMin + span; }
+            this.tlVMin = nMin; this.tlVMax = nMax;
+        },
+        tlDragEnd() { this.tlDrag = null; },
+
+        async toggleNav() {
+            this.navOpen = !this.navOpen;
+            if (this.navOpen && this.navBuildings.length === 0) {
+                this.navLoading = true;
+                try {
+                    const res = await axios.get('http://127.0.0.1:5000/api/building_floor_status');
+                    this.navBuildings = res.data.buildings || [];
+                } catch (e) {
+                    this.navBuildings = [];
+                } finally {
+                    this.navLoading = false;
+                }
+            }
+        },
+        closeNav() { this.navOpen = false; this.navActiveBld = null; this.navActiveFloor = null; },
+        navGoSubnet(prefix, octet) {
+            const subnet = prefix + '.' + octet;
+            this.navOpen = false; this.navActiveBld = null; this.navActiveFloor = null;
+            window.location.href = 'http://127.0.0.1:5000/?subnet=' + encodeURIComponent(subnet);
+        },
+
+        sev(count) {
+            if (count >= 96) return 'sev-critical';
+            if (count >= 48) return 'sev-high';
+            if (count >= 10) return 'sev-medium';
+            return 'sev-low';
+        },
+
+        resetPicker() {
+            this.pickerStart = sevenAgoFmt();
+            this.pickerEnd   = todayFmt();
+        },
+
+        async openKpi() {
+            this.showKpi = true;
+            if (Object.keys(this.kpiHistory).length === 0) {
+                await this.fetchKpiHistory();
+            }
+        },
+
+        async fetchKpiHistory() {
+            this.kpiLoading = true;
+            try {
+                const res = await axios.get('http://127.0.0.1:5000/api/get_dead_history');
+                this.kpiHistory = res.data;
+            } catch (e) {
+                console.error('KPI history error:', e);
+                this.kpiHistory = {};
+            } finally {
+                this.kpiLoading = false;
+            }
+        },
+
+        async fetchData() {
+            try {
+                const res  = await axios.get('http://127.0.0.1:5000/api/get_csv_data_all_index');
+                const data = res.data;
+                ['EAP', 'EQP', 'Switch'].forEach(t => {
+                    this.deviceStatus[t].data  = data[t] || [];
+                    this.deviceStatus[t].count = this.deviceStatus[t].data.length;
+                });
+                this.lastUpdate = new Date().toLocaleString('zh-TW', { hour12: false });
+            } catch (e) {
+                console.error('fetchData error:', e);
+            } finally {
+                this.loading    = false;
+                this.refreshing = false;
+            }
+        },
+
+        async manualRefresh() {
+            if (this.refreshing) return;
+            this.refreshing = true;
+            await Promise.all([this.fetchData(), this.fetchKpiHistory()]);
+        }
+    }
+
+}).directive('click-outside', {
+    mounted(el, binding) {
+        el._co = e => { if (!el.contains(e.target)) binding.value(e); };
+        document.addEventListener('click', el._co);
+    },
+    unmounted(el) { document.removeEventListener('click', el._co); }
+}).mount('#app');
+</script>
+</body>
+</html>
