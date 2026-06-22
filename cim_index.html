@@ -463,6 +463,52 @@
 
         .card-time { font-size:0.68rem; color:#c9d1d9; }
 
+        /* ── 近 7 天斷線 Dashboard ── */
+        .tl-dash {
+            display: flex; flex-direction: column;
+            background: #0b0f1a; border-bottom: 2px solid #21262d;
+            flex-shrink: 0;
+        }
+        .tl-dash-header {
+            display: flex; align-items: center; gap: 0;
+            border-bottom: 1px solid #1e2535; flex-shrink: 0;
+        }
+        .tl-dash-title {
+            font-size: 0.63rem; font-weight: 700; color: #8b949e;
+            letter-spacing: 2px; text-transform: uppercase;
+            padding: 5px 12px; border-right: 1px solid #1e2535;
+            white-space: nowrap; background: #0b0f1a;
+        }
+        .tl-dash-stat {
+            display: flex; align-items: center; gap: 7px;
+            padding: 5px 14px; border-right: 1px solid #1e2535;
+        }
+        .tl-ds-val  { font-size: 1.1rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+        .tl-ds-lbl  { font-size: 0.58rem; color: #8b949e; letter-spacing: .4px; white-space: nowrap; }
+        .tl-dash-spacer { flex: 1; }
+        .tl-dash-note { font-size: 0.58rem; color: #6a7585; padding: 0 12px; font-style: italic; }
+        /* 表格區 */
+        .tl-dash-body { flex: 1; overflow-y: auto; overflow-x: auto; min-height: 0; }
+        .tl-dash-body::-webkit-scrollbar { width: 5px; height: 5px; }
+        .tl-dash-body::-webkit-scrollbar-track { background: #0b0f1a; }
+        .tl-dash-body::-webkit-scrollbar-thumb { background: #21262d; border-radius: 3px; }
+        .tl-dtable { width: 100%; border-collapse: collapse; font-size: 0.72rem; font-family: 'Consolas', 'IBM Plex Mono', monospace; }
+        .tl-dtable thead tr { position: sticky; top: 0; z-index: 5; }
+        .tl-dtable th { background: #111620; color: #8b949e; padding: 4px 10px; text-align: left; border-bottom: 1px solid #1e2535; font-size: 0.62rem; letter-spacing: .8px; white-space: nowrap; font-weight: 700; }
+        .tl-dtable td { padding: 3px 10px; border-bottom: 1px solid #13181f; vertical-align: middle; white-space: nowrap; }
+        .tl-dtable tbody tr:hover td { background: #0f1520; }
+        .tl-dtable tbody tr:nth-child(even) td { background: rgba(255,255,255,.015); }
+        .td-rank  { color: #8b949e; font-size: 0.6rem; width: 28px; text-align: right; padding-right: 6px; }
+        .td-ip    { color: #f0883e; font-weight: 700; min-width: 120px; }
+        .td-name  { color: #e6edf3; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+        .td-type  { color: #c9d1d9; font-size: 0.62rem; }
+        .td-loc   { color: #c9d1d9; font-size: 0.62rem; }
+        .td-cnt   { text-align: center; font-weight: 900; width: 40px; color: #ef5350; }
+        .td-cnt-badge { display: inline-block; padding: 1px 7px; border-radius: 4px; background: rgba(229,57,53,.18); border: 1px solid rgba(229,57,53,.3); }
+        .td-segs  { min-width: 200px; }
+        .seg-pills { display: flex; flex-wrap: wrap; gap: 3px; padding: 2px 0; }
+        .seg-pill { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.62rem; background: rgba(229,57,53,.13); border: 1px solid rgba(229,57,53,.3); color: #e6edf3; white-space: nowrap; }
+
         /* Center / No-data */
         .center-box { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
         .kpi-spinner { width:32px;height:32px; border:3px solid rgba(140,60,0,.15); border-top-color:#8a4010; border-radius:50%; animation:spin .8s linear infinite; }
@@ -613,10 +659,60 @@
 
         <!-- Timeline view -->
         <div class="tl-wrap" v-else>
+            <!-- ── 近 7 天斷線 Dashboard ── -->
+            <div class="tl-dash" v-if="!tlLoading2 && !tlErr">
+                <!-- Header: 統計數字 -->
+                <div class="tl-dash-header">
+                    <div class="tl-dash-title">近 7 天斷線</div>
+                    <div class="tl-dash-stat">
+                        <div class="tl-ds-val" style="color:#ef5350">{{ tlDash7.deadEvents }}</div>
+                        <div class="tl-ds-lbl">斷線次數</div>
+                    </div>
+                    <div class="tl-dash-stat">
+                        <div class="tl-ds-val" style="color:#ffa726">{{ tlDash7.uniqueIPs }}</div>
+                        <div class="tl-ds-lbl">異常 IP 數</div>
+                    </div>
+
+                    <div class="tl-dash-spacer"></div>
+                    <div class="tl-dash-note">僅含 Machine_ID 或 Device_Name 有值的設備 · 依斷線次數排序</div>
+                </div>
+                <!-- Body: 表格 -->
+                <div class="tl-dash-body">
+                    <div v-if="tlDash7.topIPs.length===0" style="padding:12px 16px;font-size:0.7rem;color:#2d3d50;font-style:italic">近 7 天無斷線紀錄（有命名設備）</div>
+                    <table class="tl-dtable" v-else>
+                        <thead>
+                            <tr>
+                                <th class="td-rank">#</th>
+                                <th>IP 位址</th>
+                                <th>設備名稱</th>
+                                <th>類型</th>
+                                <th>位置</th>
+                                <th style="text-align:center">斷線次數</th>
+                                <th class="td-segs">斷線時段（幾點～幾點）</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, idx) in tlDash7.topIPs" :key="item.ip">
+                                <td class="td-rank">{{ idx + 1 }}</td>
+                                <td class="td-ip">{{ item.ip }}</td>
+                                <td class="td-name" :title="item.name">{{ item.name || '—' }}</td>
+                                <td class="td-type">{{ item.tp }}</td>
+                                <td class="td-loc">{{ item.loc }}</td>
+                                <td class="td-cnt"><span class="td-cnt-badge">{{ item.dead }}</span></td>
+                                <td class="td-segs">
+                                    <div class="seg-pills">
+                                        <span class="seg-pill" v-for="(s, si) in item.segs" :key="si">{{ s }}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
             <div v-if="tlLoading2" style="padding:20px;text-align:center;color:#8b949e;font-size:0.75rem">⟳ 載入中...</div>
             <div v-else-if="tlErr" style="padding:20px;text-align:center;color:#f87171;font-size:0.75rem">{{ tlErr }}</div>
             <div v-else
-                 :style="{cursor: tlDrag ? 'grabbing' : 'grab', userSelect: 'none'}"
+                 :style="{cursor: tlDrag ? 'grabbing' : 'grab', userSelect: 'none', overflow:'hidden'}"
                  @mousedown.prevent="tlDragStart"
                  @mousemove="tlDragMove"
                  @mouseup="tlDragEnd"
@@ -954,6 +1050,62 @@ createApp({
             return ticks;
         },
         tlMajorTicks() { return this.tlTimeTicks.filter(t => t.major); },
+
+        // ── 近 7 天斷線 Dashboard ──
+        tlDash7() {
+            const now = Date.now();
+            const sevenDaysAgo = now - 7 * 24 * 3600 * 1000;
+            const parseMs = s => s ? new Date(s.replace(' ', 'T')).getTime() : 0;
+            const fmtTime = ms => {
+                const d = new Date(ms);
+                const mo = d.getMonth() + 1, dd = d.getDate();
+                const hh = String(d.getHours()).padStart(2,'0'), mm = String(d.getMinutes()).padStart(2,'0');
+                return `${mo}/${dd} ${hh}:${mm}`;
+            };
+
+            const ipMap = {};
+            for (const dev of this.tlDevs) {
+                // 只計算有 Machine_ID 或 Device_Name 的設備
+                const name = (dev.mid || '').trim() || (dev.dn || '').trim();
+                if (!name) continue;
+
+                const deadSegs = [];
+                for (const seg of (dev.segs || [])) {
+                    const sMs = parseMs(seg.s);
+                    const eMs = seg.e ? parseMs(seg.e) : now;
+                    if (eMs < sevenDaysAgo || sMs > now) continue;
+                    if (seg.v === 'dead') {
+                        const clampS = Math.max(sMs, sevenDaysAgo);
+                        const clampE = Math.min(eMs, now);
+                        const eStr = seg.e ? fmtTime(clampE) : '至今';
+                        deadSegs.push(`${fmtTime(clampS)}～${eStr}`);
+                    }
+                }
+                if (deadSegs.length > 0) {
+                    ipMap[dev.ip] = {
+                        dead: deadSegs.length,
+                        name: dev.dn || dev.mid || '',
+                        tp: dev.tp || '',
+                        loc: dev.loc || '',
+                        segs: deadSegs
+                    };
+                }
+            }
+
+            const entries = Object.entries(ipMap);
+            const totalDead = entries.reduce((s, [, v]) => s + v.dead, 0);
+            const uniqueIPs = entries.length;
+
+            const namedTotal = this.tlDevs.filter(d => ((d.mid||'').trim()||(d.dn||'').trim())).length;
+            const pct = namedTotal > 0 ? Math.round(uniqueIPs / namedTotal * 100) : 0;
+
+            const topIPs = entries
+                .sort((a, b) => b[1].dead - a[1].dead)
+                .slice(0, 50)
+                .map(([ip, v]) => ({ ip, dead: v.dead, name: v.name, tp: v.tp, loc: v.loc, segs: v.segs }));
+
+            return { deadEvents: totalDead, uniqueIPs, pct, topIPs };
+        },
 
         navCurrentFloors() {
             const bld = this.navBuildings.find(b => b.id === this.navActiveBld);
