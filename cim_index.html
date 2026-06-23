@@ -24,14 +24,15 @@
         .header {
             display: flex; align-items: center; justify-content: space-between;
             border-bottom: 2px solid #30363d; padding-bottom: 10px; flex-shrink: 0;
-            position: relative;
+            position: relative; container-type: inline-size; container-name: hdr;
         }
         .header-title {
             position: absolute; left: 50%; transform: translateX(-50%);
             color: #58a6ff; font-size: 1.4rem; font-weight: 700;
             letter-spacing: 3px; text-transform: uppercase; white-space: nowrap;
+            pointer-events: none;
         }
-        .header-left  { width: 160px; position: relative; }
+        .header-left  { width: 160px; position: relative; flex-shrink: 0; }
 
         /* ── 樓層導覽下拉 ── */
         .nav-btn {
@@ -83,8 +84,41 @@
             cursor: pointer; transition: background .12s; white-space: nowrap;
         }
         .nav-subnet-tag:hover { background: #1f6feb; color: #fff; }
-        .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
         .btn-row      { display: flex; gap: 10px; }
+
+        /* ── RWD 收合按鈕 ── */
+        .btn-menu-wrap { position: relative; }
+        .btn-menu-toggle {
+            display: none;
+            align-items: center; justify-content: center;
+            width: 38px; height: 38px; border: none; border-radius: 6px;
+            background: #21262d; color: #c9d1d9; font-size: 1.3rem;
+            cursor: pointer; transition: background .15s; flex-shrink: 0;
+        }
+        .btn-menu-toggle:hover { background: #30363d; }
+        .btn-menu-dropdown {
+            display: none;
+            position: absolute; top: calc(100% + 8px); right: 0;
+            background: #161b22; border: 1px solid #30363d;
+            border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.6);
+            z-index: 9100; flex-direction: column; gap: 6px; padding: 8px;
+            min-width: 160px; animation: navFadeIn .15s ease;
+        }
+        .btn-menu-dropdown.open { display: flex; }
+        .btn-menu-dropdown .btn { width: 100%; justify-content: flex-start; }
+
+        /* 寬螢幕：顯示三顆按鈕，隱藏收合按鈕與 dropdown */
+        @container hdr (min-width: 901px) {
+            .btn-row              { display: flex !important; }
+            .btn-menu-toggle      { display: none !important; }
+            .btn-menu-dropdown    { display: none !important; }
+        }
+        /* 窄螢幕：隱藏三顆按鈕，顯示收合按鈕 */
+        @container hdr (max-width: 900px) {
+            .btn-row         { display: none !important; }
+            .btn-menu-toggle { display: flex !important; }
+        }
 
         .btn {
             display: flex; align-items: center; gap: 6px;
@@ -150,9 +184,8 @@
             flex-direction: column;
         }
         .bottom-panel.tl-mode {
-            flex: 1;
+            flex: unset;
             min-height: 0;
-            overflow-y: auto;
         }
         .bp-header {
             display: flex; align-items: center; gap: 10px;
@@ -553,7 +586,17 @@
                 </button>
                 <button class="btn btn-dash" @click="goDashboard">📊 EAP Dashboard</button>
             </div>
-
+            <div class="btn-menu-wrap">
+                <button class="btn-menu-toggle" @click.stop="menuOpen=!menuOpen">⋯</button>
+                <div class="btn-menu-dropdown" :class="{open: menuOpen}" @click="menuOpen=false">
+                    <button class="btn btn-kpi"  @click="openKpi">⚠️ CIM KPI</button>
+                    <button class="btn btn-blue" :class="{spinning:refreshing}" @click="manualRefresh" :disabled="refreshing">
+                        <span class="spin-icon">🔄</span>
+                        <span>{{ refreshing ? '更新中...' : '刷新' }}</span>
+                    </button>
+                    <button class="btn btn-dash" @click="goDashboard">📊 EAP Dashboard</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -711,30 +754,33 @@
             </div>
             <div v-if="tlLoading2" style="padding:20px;text-align:center;color:#8b949e;font-size:0.75rem">⟳ 載入中...</div>
             <div v-else-if="tlErr" style="padding:20px;text-align:center;color:#f87171;font-size:0.75rem">{{ tlErr }}</div>
-            <div v-else
-                 :style="{cursor: tlDrag ? 'grabbing' : 'grab', userSelect: 'none', overflow:'hidden'}"
-                 @mousedown.prevent="tlDragStart"
-                 @mousemove="tlDragMove"
-                 @mouseup="tlDragEnd"
-                 @mouseleave="tlDragEnd"
-                 @wheel="tlOnWheel">
-                <div :style="{width:(tlLW+tlTW)+'px',minWidth:'100%'}">
-                        <!-- Time axis -->
-                        <div style="position:sticky;top:0;z-index:20;display:flex;height:40px;background:#161b22;border-bottom:1.5px solid #30363d;box-shadow:0 2px 8px rgba(0,0,0,.4)">
-                            <div :style="{width:tlLW+'px',flexShrink:0,background:'#161b22',borderRight:'1.5px solid #30363d',display:'flex',alignItems:'center',padding:'0 10px'}">
-                                <span style="font-size:10px;color:#c9d1d9;letter-spacing:.08em">.HOST / DEVICE</span>
-                            </div>
-                            <div :style="{width:tlTW+'px',flexShrink:0,position:'relative',overflow:'visible',background:'#0d1117'}">
-                                <div v-for="tk in tlMajorTicks" :key="'al'+tk.ms"
-                                     :style="{position:'absolute',left:tk.x+'px',top:0,bottom:0,width:'1px',background:'rgba(48,54,61,.6)',pointerEvents:'none'}"></div>
-                                <div v-for="tk in tlTimeTicks" :key="tk.ms"
-                                     :style="{position:'absolute',left:tk.x+'px',top:0,bottom:0,display:'flex',flexDirection:'column',justifyContent:'flex-end',paddingBottom:'3px',pointerEvents:'none'}">
-                                    <div :style="{width:'1px',height:tk.major?'10px':'4px',background:tk.major?'#58a6ff':'#21262d',marginBottom:'2px'}"></div>
-                                    <span v-if="tk.label" style="font-size:10px;color:#c9d1d9;white-space:nowrap;transform:translateX(-50%);display:block;font-weight:500">{{ tk.label }}</span>
-                                </div>
+            <div v-else>
+                <!-- 時間軸：sticky 跟著頁面捲動 -->
+                <div style="position:sticky;top:0;z-index:20;overflow:hidden;background:#161b22;border-bottom:1.5px solid #30363d;box-shadow:0 2px 8px rgba(0,0,0,.4)">
+                    <div :style="{width:(tlLW+tlTW)+'px',minWidth:'100%',display:'flex',height:'40px'}">
+                        <div :style="{width:tlLW+'px',flexShrink:0,background:'#161b22',borderRight:'1.5px solid #30363d',display:'flex',alignItems:'center',padding:'0 10px'}">
+                            <span style="font-size:10px;color:#c9d1d9;letter-spacing:.08em">.HOST / DEVICE</span>
+                        </div>
+                        <div :style="{width:tlTW+'px',flexShrink:0,position:'relative',overflow:'visible',background:'#0d1117'}">
+                            <div v-for="tk in tlMajorTicks" :key="'al'+tk.ms"
+                                 :style="{position:'absolute',left:tk.x+'px',top:0,bottom:0,width:'1px',background:'rgba(48,54,61,.6)',pointerEvents:'none'}"></div>
+                            <div v-for="tk in tlTimeTicks" :key="tk.ms"
+                                 :style="{position:'absolute',left:tk.x+'px',top:0,bottom:0,display:'flex',flexDirection:'column',justifyContent:'flex-end',paddingBottom:'3px',pointerEvents:'none'}">
+                                <div :style="{width:'1px',height:tk.major?'10px':'4px',background:tk.major?'#58a6ff':'#21262d',marginBottom:'2px'}"></div>
+                                <span v-if="tk.label" style="font-size:10px;color:#c9d1d9;white-space:nowrap;transform:translateX(-50%);display:block;font-weight:500">{{ tk.label }}</span>
                             </div>
                         </div>
-                        <!-- Rows: all rendered, no virtual scroll -->
+                    </div>
+                </div>
+                <!-- Rows：drag container，overflow:hidden 防外部捲軸 -->
+                <div :style="{cursor: tlDrag ? 'grabbing' : 'grab', userSelect: 'none', overflow:'hidden'}"
+                     @mousedown.prevent="tlDragStart"
+                     @mousemove="tlDragMove"
+                     @mouseup="tlDragEnd"
+                     @mouseleave="tlDragEnd"
+                     @wheel="tlOnWheel">
+                    <div :style="{width:(tlLW+tlTW)+'px',minWidth:'100%'}">
+                        <!-- Rows -->
                         <div v-for="(dev, idx) in tlFiltered" :key="dev.ip"
                              :style="{height:tlRH+'px',display:'flex',alignItems:'stretch'}"
                              :class="idx%2===0?'row-even':'row-odd'">
@@ -757,8 +803,9 @@
                             </div>
                         </div>
                     </div>
-            </div>
-        </div>
+                </div><!-- end drag container -->
+            </div><!-- end v-else -->
+        </div><!-- end tl-wrap -->
 
         <!-- Tooltip -->
         <div v-show="tlTip.show"
@@ -972,6 +1019,8 @@ createApp({
             tlLW: 280, tlTW: 800, tlRH: 44, tlScrollTop: 0, tlContH: 200,
             tlDrag: null,
             tlTip: { show: false, ip: '', mid: '', tp: '', status: '', start: '', end: '', dur: '', x: 0, y: 0 },
+            menuOpen: false,
+            menuCollapsed: false,
             navOpen: false,
             navLoading: false,
             navBuildings: [],
@@ -1189,6 +1238,7 @@ createApp({
         this.fetchFloor();
         setInterval(() => this.fetchData(), 900000);
         window.addEventListener('resize', () => { this.tlUpdateTW(); this.tlUpdateContH(); });
+        document.addEventListener('click', () => { this.menuOpen = false; });
     },
 
     methods: {
