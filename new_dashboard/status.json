@@ -1,0 +1,812 @@
+﻿{
+    "K11-3F 區網(27)": {
+        "ip_len": "175 / 254",
+        "ip_use_percent": "68.90",
+        "ping_device": "27 / 32",
+        "ping_device_percent": "84.38",
+        "eqp_len": "94 / 143",
+        "eqp_len_percent": "65.73",
+        "switch_len": "13 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-3F 區網(28)": {
+        "ip_len": "59 / 254",
+        "ip_use_percent": "23.23",
+        "ping_device": "7 / 8",
+        "ping_device_percent": "87.50",
+        "eqp_len": "20 / 51",
+        "eqp_len_percent": "39.22",
+        "switch_len": "4 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-3F 區網(29)": {
+        "ip_len": "189 / 254",
+        "ip_use_percent": "74.41",
+        "ping_device": "72 / 85",
+        "ping_device_percent": "84.71",
+        "eqp_len": "86 / 150",
+        "eqp_len_percent": "57.33",
+        "switch_len": "5 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-4F 區網(35)": {
+        "ip_len": "220 / 254",
+        "ip_use_percent": "86.61",
+        "ping_device": "85 / 96",
+        "ping_device_percent": "88.54",
+        "eqp_len": "138 / 181",
+        "eqp_len_percent": "76.24",
+        "switch_len": "10 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-4F 區網(36)": {
+        "ip_len": "117 / 254",
+        "ip_use_percent": "46.06",
+        "ping_device": "14 / 15",
+        "ping_device_percent": "93.33",
+        "eqp_len": "55 / 102",
+        "eqp_len_percent": "53.92",
+        "switch_len": "5 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-4F 區網(37)": {
+        "ip_len": "50 / 254",
+        "ip_use_percent": "19.69",
+        "ping_device": "3 / 5",
+        "ping_device_percent": "60.00",
+        "eqp_len": "10 / 45",
+        "eqp_len_percent": "22.22",
+        "switch_len": "5 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-5F 區網(43)": {
+        "ip_len": "162 / 254",
+        "ip_use_percent": "63.78",
+        "ping_device": "27 / 33",
+        "ping_device_percent": "81.82",
+        "eqp_len": "82 / 129",
+        "eqp_len_percent": "63.57",
+        "switch_len": "10 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-5F 區網(44)": {
+        "ip_len": "77 / 254",
+        "ip_use_percent": "30.31",
+        "ping_device": "7 / 8",
+        "ping_device_percent": "87.50",
+        "eqp_len": "42 / 69",
+        "eqp_len_percent": "60.87",
+        "switch_len": "6 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-5F 區網(45)": {
+        "ip_len": "147 / 254",
+        "ip_use_percent": "57.87",
+        "ping_device": "19 / 28",
+        "ping_device_percent": "67.86",
+        "eqp_len": "40 / 119",
+        "eqp_len_percent": "33.61",
+        "switch_len": "9 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-5F 區網(46)": {
+        "ip_len": "82 / 254",
+        "ip_use_percent": "32.28",
+        "ping_device": "21 / 25",
+        "ping_device_percent": "84.00",
+        "eqp_len": "29 / 57",
+        "eqp_len_percent": "50.88",
+        "switch_len": "3 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-6F 區網(51)": {
+        "ip_len": "130 / 254",
+        "ip_use_percent": "51.18",
+        "ping_device": "37 / 37",
+        "ping_device_percent": "100.00",
+        "eqp_len": "62 / 93",
+        "eqp_len_percent": "66.67",
+        "switch_len": "8 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-6F 區網(52)": {
+        "ip_len": "129 / 254",
+        "ip_use_percent": "50.79",
+        "ping_device": "6 / 8",
+        "ping_device_percent": "75.00",
+        "eqp_len": "26 / 121",
+        "eqp_len_percent": "21.49",
+        "switch_len": "6 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-6F 區網(53)": {
+        "ip_len": "87 / 254",
+        "ip_use_percent": "34.25",
+        "ping_device": "13 / 20",
+        "ping_device_percent": "65.00",
+        "eqp_len": "38 / 67",
+        "eqp_len_percent": "56.72",
+        "switch_len": "7 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-6F 區網(54)": {
+        "ip_len": "152 / 254",
+        "ip_use_percent": "59.84",
+        "ping_device": "8 / 22",
+        "ping_device_percent": "36.36",
+        "eqp_len": "0 / 130",
+        "eqp_len_percent": "0.00",
+        "switch_len": "6 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-7F 區網(59)": {
+        "ip_len": "183 / 254",
+        "ip_use_percent": "72.05",
+        "ping_device": "11 / 31",
+        "ping_device_percent": "35.48",
+        "eqp_len": "76 / 152",
+        "eqp_len_percent": "50.00",
+        "switch_len": "10 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-7F 區網(60)": {
+        "ip_len": "198 / 254",
+        "ip_use_percent": "77.95",
+        "ping_device": "7 / 20",
+        "ping_device_percent": "35.00",
+        "eqp_len": "100 / 178",
+        "eqp_len_percent": "56.18",
+        "switch_len": "4 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-7F 區網(61)": {
+        "ip_len": "71 / 254",
+        "ip_use_percent": "27.95",
+        "ping_device": "17 / 18",
+        "ping_device_percent": "94.44",
+        "eqp_len": "23 / 53",
+        "eqp_len_percent": "43.40",
+        "switch_len": "3 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-7F 區網(62)": {
+        "ip_len": "141 / 254",
+        "ip_use_percent": "55.51",
+        "ping_device": "3 / 4",
+        "ping_device_percent": "75.00",
+        "eqp_len": "80 / 137",
+        "eqp_len_percent": "58.39",
+        "switch_len": "1 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-8F 區網(67)": {
+        "ip_len": "152 / 254",
+        "ip_use_percent": "59.84",
+        "ping_device": "38 / 46",
+        "ping_device_percent": "82.61",
+        "eqp_len": "67 / 106",
+        "eqp_len_percent": "63.21",
+        "switch_len": "13 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-8F 區網(68)": {
+        "ip_len": "23 / 254",
+        "ip_use_percent": "9.06",
+        "ping_device": "0 / 1",
+        "ping_device_percent": "0.00",
+        "eqp_len": "10 / 22",
+        "eqp_len_percent": "45.45",
+        "switch_len": "2 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-8F 區網(69)": {
+        "ip_len": "110 / 254",
+        "ip_use_percent": "43.31",
+        "ping_device": "14 / 29",
+        "ping_device_percent": "48.28",
+        "eqp_len": "25 / 81",
+        "eqp_len_percent": "30.86",
+        "switch_len": "14 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-8F 區網(70)": {
+        "ip_len": "149 / 254",
+        "ip_use_percent": "58.66",
+        "ping_device": "16 / 24",
+        "ping_device_percent": "66.67",
+        "eqp_len": "37 / 125",
+        "eqp_len_percent": "29.60",
+        "switch_len": "9 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-9F 區網(76)": {
+        "ip_len": "115 / 254",
+        "ip_use_percent": "45.28",
+        "ping_device": "29 / 35",
+        "ping_device_percent": "82.86",
+        "eqp_len": "33 / 80",
+        "eqp_len_percent": "41.25",
+        "switch_len": "7 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-9F 區網(77)": {
+        "ip_len": "142 / 254",
+        "ip_use_percent": "55.91",
+        "ping_device": "22 / 26",
+        "ping_device_percent": "84.62",
+        "eqp_len": "50 / 116",
+        "eqp_len_percent": "43.10",
+        "switch_len": "10 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-9F 區網(78)": {
+        "ip_len": "119 / 254",
+        "ip_use_percent": "46.85",
+        "ping_device": "9 / 11",
+        "ping_device_percent": "81.82",
+        "eqp_len": "43 / 108",
+        "eqp_len_percent": "39.81",
+        "switch_len": "7 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-10F 區網(83)": {
+        "ip_len": "92 / 254",
+        "ip_use_percent": "36.22",
+        "ping_device": "15 / 23",
+        "ping_device_percent": "65.22",
+        "eqp_len": "3 / 69",
+        "eqp_len_percent": "4.35",
+        "switch_len": "8 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-10F 區網(84)": {
+        "ip_len": "209 / 254",
+        "ip_use_percent": "82.28",
+        "ping_device": "54 / 58",
+        "ping_device_percent": "93.10",
+        "eqp_len": "71 / 151",
+        "eqp_len_percent": "47.02",
+        "switch_len": "11 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-9F 區網(41)": {
+        "ip_len": "58 / 254",
+        "ip_use_percent": "22.83",
+        "ping_device": "1 / 1",
+        "ping_device_percent": "100.00",
+        "eqp_len": "32 / 57",
+        "eqp_len_percent": "56.14",
+        "switch_len": "12 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-9F 區網(42)": {
+        "ip_len": "42 / 254",
+        "ip_use_percent": "16.54",
+        "ping_device": "1 / 2",
+        "ping_device_percent": "50.00",
+        "eqp_len": "32 / 40",
+        "eqp_len_percent": "80.00",
+        "switch_len": "8 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-9F 區網(44)": {
+        "ip_len": "141 / 254",
+        "ip_use_percent": "55.51",
+        "ping_device": "23 / 30",
+        "ping_device_percent": "76.67",
+        "eqp_len": "72 / 111",
+        "eqp_len_percent": "64.86",
+        "switch_len": "14 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-9F 區網(45)": {
+        "ip_len": "106 / 254",
+        "ip_use_percent": "41.73",
+        "ping_device": "13 / 14",
+        "ping_device_percent": "92.86",
+        "eqp_len": "57 / 92",
+        "eqp_len_percent": "61.96",
+        "switch_len": "13 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-5F 區網(27)": {
+        "ip_len": "173 / 254",
+        "ip_use_percent": "68.11",
+        "ping_device": "29 / 44",
+        "ping_device_percent": "65.91",
+        "eqp_len": "56 / 129",
+        "eqp_len_percent": "43.41",
+        "switch_len": "12 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-5F 區網(28)": {
+        "ip_len": "60 / 254",
+        "ip_use_percent": "23.62",
+        "ping_device": "8 / 12",
+        "ping_device_percent": "66.67",
+        "eqp_len": "27 / 48",
+        "eqp_len_percent": "56.25",
+        "switch_len": "8 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-5F 區網(29)": {
+        "ip_len": "103 / 254",
+        "ip_use_percent": "40.55",
+        "ping_device": "5 / 13",
+        "ping_device_percent": "38.46",
+        "eqp_len": "55 / 90",
+        "eqp_len_percent": "61.11",
+        "switch_len": "9 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-5F 區網(30)": {
+        "ip_len": "22 / 254",
+        "ip_use_percent": "8.66",
+        "ping_device": "3 / 3",
+        "ping_device_percent": "100.00",
+        "eqp_len": "6 / 19",
+        "eqp_len_percent": "31.58",
+        "switch_len": "7 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-8F 區網(60)": {
+        "ip_len": "181 / 254",
+        "ip_use_percent": "71.26",
+        "ping_device": "12 / 29",
+        "ping_device_percent": "41.38",
+        "eqp_len": "72 / 152",
+        "eqp_len_percent": "47.37",
+        "switch_len": "9 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-8F 區網(61)": {
+        "ip_len": "128 / 254",
+        "ip_use_percent": "50.39",
+        "ping_device": "12 / 15",
+        "ping_device_percent": "80.00",
+        "eqp_len": "57 / 113",
+        "eqp_len_percent": "50.44",
+        "switch_len": "10 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-8F 區網(62)": {
+        "ip_len": "138 / 254",
+        "ip_use_percent": "54.33",
+        "ping_device": "26 / 27",
+        "ping_device_percent": "96.30",
+        "eqp_len": "31 / 111",
+        "eqp_len_percent": "27.93",
+        "switch_len": "16 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-8F 區網(63)": {
+        "ip_len": "94 / 254",
+        "ip_use_percent": "37.01",
+        "ping_device": "36 / 43",
+        "ping_device_percent": "83.72",
+        "eqp_len": "32 / 51",
+        "eqp_len_percent": "62.75",
+        "switch_len": "15 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-8F 區網(71)": {
+        "ip_len": "88 / 254",
+        "ip_use_percent": "34.65",
+        "ping_device": "24 / 25",
+        "ping_device_percent": "96.00",
+        "eqp_len": "44 / 63",
+        "eqp_len_percent": "69.84",
+        "switch_len": "13 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-9F 區網(64)": {
+        "ip_len": "98 / 254",
+        "ip_use_percent": "38.58",
+        "ping_device": "2 / 7",
+        "ping_device_percent": "28.57",
+        "eqp_len": "40 / 91",
+        "eqp_len_percent": "43.96",
+        "switch_len": "10 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-9F 區網(65)": {
+        "ip_len": "115 / 254",
+        "ip_use_percent": "45.28",
+        "ping_device": "9 / 17",
+        "ping_device_percent": "52.94",
+        "eqp_len": "28 / 98",
+        "eqp_len_percent": "28.57",
+        "switch_len": "7 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-9F 區網(66)": {
+        "ip_len": "137 / 254",
+        "ip_use_percent": "53.94",
+        "ping_device": "3 / 9",
+        "ping_device_percent": "33.33",
+        "eqp_len": "85 / 128",
+        "eqp_len_percent": "66.41",
+        "switch_len": "11 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-9F 區網(67)": {
+        "ip_len": "203 / 254",
+        "ip_use_percent": "79.92",
+        "ping_device": "19 / 36",
+        "ping_device_percent": "52.78",
+        "eqp_len": "131 / 167",
+        "eqp_len_percent": "78.44",
+        "switch_len": "18 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K22-5F 區網(88)": {
+        "ip_len": "174 / 254",
+        "ip_use_percent": "68.50",
+        "ping_device": "26 / 33",
+        "ping_device_percent": "78.79",
+        "eqp_len": "64 / 141",
+        "eqp_len_percent": "45.39",
+        "switch_len": "15 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K22-5F 區網(89)": {
+        "ip_len": "26 / 254",
+        "ip_use_percent": "10.24",
+        "ping_device": "3 / 6",
+        "ping_device_percent": "50.00",
+        "eqp_len": "3 / 20",
+        "eqp_len_percent": "15.00",
+        "switch_len": "7 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K22-5F 區網(90)": {
+        "ip_len": "166 / 254",
+        "ip_use_percent": "65.35",
+        "ping_device": "21 / 24",
+        "ping_device_percent": "87.50",
+        "eqp_len": "94 / 142",
+        "eqp_len_percent": "66.20",
+        "switch_len": "16 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K22-5F 區網(91)": {
+        "ip_len": "20 / 254",
+        "ip_use_percent": "7.87",
+        "ping_device": "3 / 6",
+        "ping_device_percent": "50.00",
+        "eqp_len": "8 / 14",
+        "eqp_len_percent": "57.14",
+        "switch_len": "6 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K22-8F 區網(100)": {
+        "ip_len": "186 / 254",
+        "ip_use_percent": "73.23",
+        "ping_device": "30 / 31",
+        "ping_device_percent": "96.77",
+        "eqp_len": "78 / 155",
+        "eqp_len_percent": "50.32",
+        "switch_len": "11 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K22-8F 區網(101)": {
+        "ip_len": "142 / 254",
+        "ip_use_percent": "55.91",
+        "ping_device": "32 / 36",
+        "ping_device_percent": "88.89",
+        "eqp_len": "53 / 106",
+        "eqp_len_percent": "50.00",
+        "switch_len": "10 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K22-8F 區網(102)": {
+        "ip_len": "93 / 254",
+        "ip_use_percent": "36.61",
+        "ping_device": "6 / 11",
+        "ping_device_percent": "54.55",
+        "eqp_len": "39 / 82",
+        "eqp_len_percent": "47.56",
+        "switch_len": "8 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "suixiu": {
+        "ip_len": "332 / 332",
+        "ip_use_percent": "100.00",
+        "ping_device": "324 / 332",
+        "ping_device_percent": "97.59",
+        "eqp_len": "0",
+        "eqp_len_percent": "0.00",
+        "switch_len": "0",
+        "switch_len_percent": "0.00"
+    },
+    "其他 區網(10)": {
+        "ip_len": "33 / 33",
+        "ip_use_percent": "100.00",
+        "ping_device": "27 / 0",
+        "ping_device_percent": "0.00",
+        "eqp_len": "0 / 0",
+        "eqp_len_percent": "0.00",
+        "switch_len": "0 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-10F 區網(47)": {
+        "ip_len": "129 / 254",
+        "ip_use_percent": "50.79",
+        "ping_device": "16 / 21",
+        "ping_device_percent": "76.19",
+        "eqp_len": "55 / 108",
+        "eqp_len_percent": "50.93",
+        "switch_len": "9 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K22-8F 區網(103)": {
+        "ip_len": "203 / 254",
+        "ip_use_percent": "79.92",
+        "ping_device": "85 / 115",
+        "ping_device_percent": "73.91",
+        "eqp_len": "117 / 168",
+        "eqp_len_percent": "69.64",
+        "switch_len": "11 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K22-9F 區網(104)": {
+        "ip_len": "178 / 254",
+        "ip_use_percent": "70.08",
+        "ping_device": "34 / 36",
+        "ping_device_percent": "94.44",
+        "eqp_len": "64 / 142",
+        "eqp_len_percent": "45.07",
+        "switch_len": "14 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K22-9F 區網(105)": {
+        "ip_len": "37 / 254",
+        "ip_use_percent": "14.57",
+        "ping_device": "18 / 20",
+        "ping_device_percent": "90.00",
+        "eqp_len": "11 / 17",
+        "eqp_len_percent": "64.71",
+        "switch_len": "3 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K22-9F 區網(106)": {
+        "ip_len": "85 / 254",
+        "ip_use_percent": "33.46",
+        "ping_device": "21 / 26",
+        "ping_device_percent": "80.77",
+        "eqp_len": "43 / 59",
+        "eqp_len_percent": "72.88",
+        "switch_len": "7 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K25-8F 區網(176)": {
+        "ip_len": "121 / 254",
+        "ip_use_percent": "47.64",
+        "ping_device": "18 / 25",
+        "ping_device_percent": "72.00",
+        "eqp_len": "13 / 96",
+        "eqp_len_percent": "13.54",
+        "switch_len": "11 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K25-8F 區網(177)": {
+        "ip_len": "169 / 254",
+        "ip_use_percent": "66.54",
+        "ping_device": "6 / 19",
+        "ping_device_percent": "31.58",
+        "eqp_len": "67 / 150",
+        "eqp_len_percent": "44.67",
+        "switch_len": "10 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K25-8F 區網(178)": {
+        "ip_len": "128 / 254",
+        "ip_use_percent": "50.39",
+        "ping_device": "24 / 24",
+        "ping_device_percent": "100.00",
+        "eqp_len": "46 / 104",
+        "eqp_len_percent": "44.23",
+        "switch_len": "10 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K25-8F 區網(179)": {
+        "ip_len": "117 / 254",
+        "ip_use_percent": "46.06",
+        "ping_device": "32 / 35",
+        "ping_device_percent": "91.43",
+        "eqp_len": "52 / 82",
+        "eqp_len_percent": "63.41",
+        "switch_len": "7 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K25-9F 區網(180)": {
+        "ip_len": "82 / 254",
+        "ip_use_percent": "32.28",
+        "ping_device": "14 / 14",
+        "ping_device_percent": "100.00",
+        "eqp_len": "49 / 68",
+        "eqp_len_percent": "72.06",
+        "switch_len": "7 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K25-9F 區網(181)": {
+        "ip_len": "62 / 254",
+        "ip_use_percent": "24.41",
+        "ping_device": "17 / 24",
+        "ping_device_percent": "70.83",
+        "eqp_len": "20 / 38",
+        "eqp_len_percent": "52.63",
+        "switch_len": "7 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K25-9F 區網(182)": {
+        "ip_len": "67 / 254",
+        "ip_use_percent": "26.38",
+        "ping_device": "16 / 16",
+        "ping_device_percent": "100.00",
+        "eqp_len": "18 / 51",
+        "eqp_len_percent": "35.29",
+        "switch_len": "9 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K25-9F 區網(183)": {
+        "ip_len": "30 / 254",
+        "ip_use_percent": "11.81",
+        "ping_device": "30 / 30",
+        "ping_device_percent": "100.00",
+        "eqp_len": "0 / 0",
+        "eqp_len_percent": "0.00",
+        "switch_len": "3 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-10F 區網(48)": {
+        "ip_len": "125 / 254",
+        "ip_use_percent": "49.21",
+        "ping_device": "1 / 1",
+        "ping_device_percent": "100.00",
+        "eqp_len": "103 / 124",
+        "eqp_len_percent": "83.06",
+        "switch_len": "10 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-10F 區網(50)": {
+        "ip_len": "104 / 254",
+        "ip_use_percent": "40.94",
+        "ping_device": "11 / 13",
+        "ping_device_percent": "84.62",
+        "eqp_len": "17 / 93",
+        "eqp_len_percent": "18.28",
+        "switch_len": "7 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-10F 區網(51)": {
+        "ip_len": "73 / 254",
+        "ip_use_percent": "28.74",
+        "ping_device": "18 / 22",
+        "ping_device_percent": "81.82",
+        "eqp_len": "24 / 51",
+        "eqp_len_percent": "47.06",
+        "switch_len": "11 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K11-3F 區網(30)": {
+        "ip_len": "91 / 254",
+        "ip_use_percent": "35.83",
+        "ping_device": "0 / 0",
+        "ping_device_percent": "0.00",
+        "eqp_len": "1 / 91",
+        "eqp_len_percent": "1.10",
+        "switch_len": "1 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-8F 區網(35)": {
+        "ip_len": "58 / 254",
+        "ip_use_percent": "22.83",
+        "ping_device": "0 / 1",
+        "ping_device_percent": "0.00",
+        "eqp_len": "8 / 57",
+        "eqp_len_percent": "14.04",
+        "switch_len": "13 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-10F 區網(49)": {
+        "ip_len": "254 / 254",
+        "ip_use_percent": "100.00",
+        "ping_device": "24 / 0",
+        "ping_device_percent": "0.00",
+        "eqp_len": "0 / 0",
+        "eqp_len_percent": "0.00",
+        "switch_len": "0 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-10F 區網(63)": {
+        "ip_len": "254 / 254",
+        "ip_use_percent": "100.00",
+        "ping_device": "9 / 0",
+        "ping_device_percent": "0.00",
+        "eqp_len": "0 / 0",
+        "eqp_len_percent": "0.00",
+        "switch_len": "0 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-11F 區網(53)": {
+        "ip_len": "76 / 254",
+        "ip_use_percent": "29.92",
+        "ping_device": "12 / 12",
+        "ping_device_percent": "100.00",
+        "eqp_len": "43 / 64",
+        "eqp_len_percent": "67.19",
+        "switch_len": "12 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-11F 區網(54)": {
+        "ip_len": "153 / 254",
+        "ip_use_percent": "60.24",
+        "ping_device": "18 / 19",
+        "ping_device_percent": "94.74",
+        "eqp_len": "120 / 134",
+        "eqp_len_percent": "89.55",
+        "switch_len": "9 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-11F 區網(55)": {
+        "ip_len": "204 / 254",
+        "ip_use_percent": "80.31",
+        "ping_device": "1 / 30",
+        "ping_device_percent": "3.33",
+        "eqp_len": "43 / 174",
+        "eqp_len_percent": "24.71",
+        "switch_len": "15 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-11F 區網(56)": {
+        "ip_len": "159 / 254",
+        "ip_use_percent": "62.60",
+        "ping_device": "32 / 39",
+        "ping_device_percent": "82.05",
+        "eqp_len": "101 / 132",
+        "eqp_len_percent": "76.52",
+        "switch_len": "13 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-11F 區網(57)": {
+        "ip_len": "50 / 254",
+        "ip_use_percent": "19.69",
+        "ping_device": "12 / 12",
+        "ping_device_percent": "100.00",
+        "eqp_len": "21 / 38",
+        "eqp_len_percent": "55.26",
+        "switch_len": "6 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K18-11F 區網(58)": {
+        "ip_len": "172 / 254",
+        "ip_use_percent": "67.72",
+        "ping_device": "2 / 19",
+        "ping_device_percent": "10.53",
+        "eqp_len": "44 / 153",
+        "eqp_len_percent": "28.76",
+        "switch_len": "10 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K21-9F 區網(69)": {
+        "ip_len": "254 / 254",
+        "ip_use_percent": "100.00",
+        "ping_device": "138 / 0",
+        "ping_device_percent": "0.00",
+        "eqp_len": "0 / 0",
+        "eqp_len_percent": "0.00",
+        "switch_len": "0 / 0",
+        "switch_len_percent": "0.00"
+    },
+    "K22-8F 區網(112)": {
+        "ip_len": "10 / 254",
+        "ip_use_percent": "3.94",
+        "ping_device": "0 / 0",
+        "ping_device_percent": "0.00",
+        "eqp_len": "4 / 10",
+        "eqp_len_percent": "40.00",
+        "switch_len": "7 / 0",
+        "switch_len_percent": "0.00"
+    }
+}

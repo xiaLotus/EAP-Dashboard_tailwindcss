@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Log Pro</title>
+  <script src="static/js/tailwind.js"></script>
+  <script src="static/js/vue.global.js"></script>
+  <link rel="stylesheet" href="static/css/all.min.css">
+  <link rel="stylesheet" href="static/css/log.css">
+  
+  <script>
+    // tailwind.config
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="bg-[#0f172a] text-slate-200 h-screen">
+
+<div id="app" class="flex flex-col h-full p-4 md:p-6 gap-4">
+
+<!-- Header -->
+<header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-2 border-b border-slate-800">
+  <div class="flex items-start sm:items-center gap-3 w-full sm:w-auto">
+    <!-- 標題區塊 -->
+    <div>
+      <h1 class="text-xl font-bold text-white flex items-center gap-2">
+        <i class="fa-solid fa-clipboard-list text-blue-400"></i>
+        系統操作紀錄
+      </h1>
+      <p class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+        Audit Log Dashboard · 即時監控
+        
+        <!-- 返回按鈕 -->
+        <button 
+          @click="goBack" 
+          class="ml-2 inline-flex items-center gap-1.5 
+                 px-2.5 py-1 rounded-lg
+                 text-xs font-medium text-slate-400 
+                 bg-slate-800/50 border border-slate-700
+                 hover:text-white hover:bg-slate-700 hover:border-slate-600
+                 hover:shadow-lg hover:shadow-black/20
+                 transition-all duration-200
+                 active:scale-[0.98]">
+          <i class="fa-solid fa-arrow-left text-[10px]"></i>
+          返回
+        </button>
+      </p>
+    </div>
+  </div>
+
+  <!-- 右側搜尋與載入按鈕 (保持原樣) -->
+  <div class="flex flex-wrap gap-2 items-center w-full sm:w-auto">
+    <div class="relative flex-1 sm:flex-none">
+      <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+      <input 
+        v-model="searchQuery"
+        class="bg-slate-800/50 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-sm w-full sm:w-64 
+               focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder:text-slate-600"
+        placeholder="搜尋操作者、欄位、值...">
+    </div>
+
+    <button @click="fetchLogs" :disabled="loading"
+      class="bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800/50 
+             px-4 py-2 rounded-lg text-sm font-medium shadow-lg shadow-blue-900/20
+             transition-all flex items-center gap-2 min-w-[44px] justify-center">
+      <i class="fa-solid fa-rotate" :class="{'animate-spin': loading}"></i>
+      <span class="hidden sm:inline">重新載入</span>
+    </button>
+  </div>
+</header>
+
+  <!-- Stats Bar -->
+  <div class="flex flex-wrap gap-3 text-xs">
+    <div class="bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700/50">
+      <span class="text-slate-500">總筆數:</span>
+      <span class="text-white font-medium ml-1">{{ logs.length }}</span>
+    </div>
+    <div class="bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700/50">
+      <span class="text-slate-500">篩選後:</span>
+      <span class="text-emerald-400 font-medium ml-1">{{ filteredLogs.length }}</span>
+    </div>
+    <div v-if="lastUpdated" class="text-slate-600 flex items-center gap-1">
+      <i class="fa-regular fa-clock"></i>
+      {{ lastUpdated }}
+    </div>
+  </div>
+
+  <!-- Table Container -->
+  <div class="flex-1 bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden shadow-xl backdrop-blur-sm table-container">
+    
+    <!-- Table Header Controls -->
+    <div class="px-4 py-2 bg-slate-800/30 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+      <span>點擊欄位標題可篩選</span>
+      <button @click="resetFilters" class="hover:text-blue-400 transition-colors flex items-center gap-1">
+        <i class="fa-solid fa-filter-circle-xmark"></i> 清除篩選
+      </button>
+    </div>
+
+    <!-- Table Wrapper -->
+    <div class="overflow-auto h-full max-h-[calc(100vh-280px)]">
+      <!-- ⭐ 添加 table-layout: fixed -->
+      <table class="audit-table text-sm text-left border-collapse">
+        <!-- Header -->
+        <thead class="bg-slate-800/80 z-20">
+          <tr>
+            <th class="col-time px-3 md:px-4 py-3 border-b border-slate-700 relative select-none">
+              <div class="flex items-center gap-1.5 cursor-pointer hover:text-blue-400 transition-colors"
+                   @click="toggleFilter('time')">
+                <span class="font-medium text-slate-300 nowrap">時間</span>
+                <i class="fa-solid fa-chevron-down text-[9px] text-slate-500 transition-colors"
+                   :class="{'rotate-180 text-blue-400': showFilter['time']}"></i>
+                <span v-if="filters['time']?.length > 0" 
+                      class="ml-1 bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full">
+                  {{ filters['time'].length }}
+                </span>
+              </div>
+
+              <transition name="dropdown">
+                <div v-if="showFilter['time']"
+                     class="filter-dropdown absolute left-3 md:left-4 top-full mt-1 w-56 
+                            bg-slate-900 border border-slate-700 
+                            rounded-xl shadow-2xl z-50 p-2 
+                            max-h-48 overflow-y-auto
+                            will-change: transform">
+                  <div class="flex items-center justify-between px-2 py-1.5 border-b border-slate-800 mb-1">
+                    <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">篩選條件</span>
+                    <button @click.stop="filters['time'] = []; showFilter['time'] = false" 
+                            class="text-slate-500 hover:text-red-400 text-xs">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                  <label v-for="val in uniqueValuesMap['time']" :key="val"
+                         class="flex items-center gap-2.5 text-xs px-2 py-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer">
+                    <input type="checkbox"
+                           @click.stop
+                           class="w-4 h-4 rounded border-slate-600 text-blue-500 focus:ring-blue-500/30 
+                                  bg-slate-800 accent-blue-500 cursor-pointer checkbox-no-bubble"
+                           v-model="filters['time']" :value="val">
+                    <span class="truncate text-slate-300">
+                      {{ val === '' ? '(空值)' : val }}
+                    </span>
+                    <span class="ml-auto text-[10px] text-slate-600 flex-shrink-0">
+                      {{ logs.filter(l => l['time'] === val).length }}
+                    </span>
+                  </label>
+                  <div v-if="uniqueValuesMap['time'].length === 0" 
+                       class="px-2 py-3 text-center text-xs text-slate-500">
+                    無資料
+                  </div>
+                </div>
+              </transition>
+            </th>
+
+            <th class="col-username px-3 md:px-4 py-3 border-b border-slate-700 relative select-none">
+              <div class="flex items-center gap-1.5 cursor-pointer hover:text-blue-400 transition-colors"
+                   @click="toggleFilter('username')">
+                <span class="font-medium text-slate-300 nowrap">操作者</span>
+                <i class="fa-solid fa-chevron-down text-[9px] text-slate-500 transition-colors"
+                   :class="{'rotate-180 text-blue-400': showFilter['username']}"></i>
+                <span v-if="filters['username']?.length > 0" 
+                      class="ml-1 bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full">
+                  {{ filters['username'].length }}
+                </span>
+              </div>
+
+              <transition name="dropdown">
+                <div v-if="showFilter['username']"
+                     class="filter-dropdown absolute left-3 md:left-4 top-full mt-1 w-56 
+                            bg-slate-900 border border-slate-700 
+                            rounded-xl shadow-2xl z-50 p-2 
+                            max-h-48 overflow-y-auto
+                            will-change: transform">
+                  <div class="flex items-center justify-between px-2 py-1.5 border-b border-slate-800 mb-1">
+                    <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">篩選條件</span>
+                    <button @click.stop="filters['username'] = []; showFilter['username'] = false" 
+                            class="text-slate-500 hover:text-red-400 text-xs">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                  <label v-for="val in uniqueValuesMap['username']" :key="val"
+                         class="flex items-center gap-2.5 text-xs px-2 py-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer">
+                    <input type="checkbox"
+                           @click.stop
+                           class="w-4 h-4 rounded border-slate-600 text-blue-500 focus:ring-blue-500/30 
+                                  bg-slate-800 accent-blue-500 cursor-pointer checkbox-no-bubble"
+                           v-model="filters['username']" :value="val">
+                    <span class="truncate text-slate-300">
+                      {{ val === '' ? '(空值)' : val }}
+                    </span>
+                    <span class="ml-auto text-[10px] text-slate-600 flex-shrink-0">
+                      {{ logs.filter(l => l['username'] === val).length }}
+                    </span>
+                  </label>
+                  <div v-if="uniqueValuesMap['username'].length === 0" 
+                       class="px-2 py-3 text-center text-xs text-slate-500">
+                    無資料
+                  </div>
+                </div>
+              </transition>
+            </th>
+
+            <th class="col-floor px-3 md:px-4 py-3 border-b border-slate-700 relative select-none">
+              <div class="flex items-center gap-1.5 cursor-pointer hover:text-blue-400 transition-colors"
+                   @click="toggleFilter('floor')">
+                <span class="font-medium text-slate-300 nowrap">樓層</span>
+                <i class="fa-solid fa-chevron-down text-[9px] text-slate-500 transition-colors"
+                   :class="{'rotate-180 text-blue-400': showFilter['floor']}"></i>
+                <span v-if="filters['floor']?.length > 0" 
+                      class="ml-1 bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full">
+                  {{ filters['floor'].length }}
+                </span>
+              </div>
+
+              <transition name="dropdown">
+                <div v-if="showFilter['floor']"
+                     class="filter-dropdown absolute left-3 md:left-4 top-full mt-1 w-56 
+                            bg-slate-900 border border-slate-700 
+                            rounded-xl shadow-2xl z-50 p-2 
+                            max-h-48 overflow-y-auto
+                            will-change: transform">
+                  <div class="flex items-center justify-between px-2 py-1.5 border-b border-slate-800 mb-1">
+                    <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">篩選條件</span>
+                    <button @click.stop="filters['floor'] = []; showFilter['floor'] = false" 
+                            class="text-slate-500 hover:text-red-400 text-xs">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                  <label v-for="val in uniqueValuesMap['floor']" :key="val"
+                         class="flex items-center gap-2.5 text-xs px-2 py-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer">
+                    <input type="checkbox"
+                           @click.stop
+                           class="w-4 h-4 rounded border-slate-600 text-blue-500 focus:ring-blue-500/30 
+                                  bg-slate-800 accent-blue-500 cursor-pointer checkbox-no-bubble"
+                           v-model="filters['floor']" :value="val">
+                    <span class="truncate text-slate-300">
+                      {{ val === '' ? '(空值)' : val }}
+                    </span>
+                    <span class="ml-auto text-[10px] text-slate-600 flex-shrink-0">
+                      {{ logs.filter(l => ((l.site || '') + '-' + (l.floor || '')) === val).length }}
+                    </span>
+                  </label>
+                  <div v-if="uniqueValuesMap['floor'].length === 0" 
+                       class="px-2 py-3 text-center text-xs text-slate-500">
+                    無資料
+                  </div>
+                </div>
+              </transition>
+            </th>
+
+            <th class="col-ip px-3 md:px-4 py-3 border-b border-slate-700 relative select-none">
+              <div class="flex items-center gap-1.5 cursor-pointer hover:text-blue-400 transition-colors"
+                   @click="toggleFilter('ip')">
+                <span class="font-medium text-slate-300 nowrap">IP</span>
+                <i class="fa-solid fa-chevron-down text-[9px] text-slate-500 transition-colors"
+                   :class="{'rotate-180 text-blue-400': showFilter['ip']}"></i>
+                <span v-if="filters['ip']?.length > 0" 
+                      class="ml-1 bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full">
+                  {{ filters['ip'].length }}
+                </span>
+              </div>
+
+              <transition name="dropdown">
+                <div v-if="showFilter['ip']"
+                     class="filter-dropdown absolute left-3 md:left-4 top-full mt-1 w-56 
+                            bg-slate-900 border border-slate-700 
+                            rounded-xl shadow-2xl z-50 p-2 
+                            max-h-48 overflow-y-auto
+                            will-change: transform">
+                  <div class="flex items-center justify-between px-2 py-1.5 border-b border-slate-800 mb-1">
+                    <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">篩選條件</span>
+                    <button @click.stop="filters['ip'] = []; showFilter['ip'] = false" 
+                            class="text-slate-500 hover:text-red-400 text-xs">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                  <label v-for="val in uniqueValuesMap['ip']" :key="val"
+                         class="flex items-center gap-2.5 text-xs px-2 py-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer">
+                    <input type="checkbox"
+                           @click.stop
+                           class="w-4 h-4 rounded border-slate-600 text-blue-500 focus:ring-blue-500/30 
+                                  bg-slate-800 accent-blue-500 cursor-pointer checkbox-no-bubble"
+                           v-model="filters['ip']" :value="val">
+                    <span class="truncate text-slate-300">
+                      {{ val === '' ? '(空值)' : val }}
+                    </span>
+                    <span class="ml-auto text-[10px] text-slate-600 flex-shrink-0">
+                      {{ logs.filter(l => l['ip'] === val).length }}
+                    </span>
+                  </label>
+                  <div v-if="uniqueValuesMap['ip'].length === 0" 
+                       class="px-2 py-3 text-center text-xs text-slate-500">
+                    無資料
+                  </div>
+                </div>
+              </transition>
+            </th>
+
+            <th class="col-field px-3 md:px-4 py-3 border-b border-slate-700 relative select-none">
+              <div class="flex items-center gap-1.5 cursor-pointer hover:text-blue-400 transition-colors"
+                   @click="toggleFilter('field')">
+                <span class="font-medium text-slate-300 nowrap">欄位</span>
+                <i class="fa-solid fa-chevron-down text-[9px] text-slate-500 transition-colors"
+                   :class="{'rotate-180 text-blue-400': showFilter['field']}"></i>
+                <span v-if="filters['field']?.length > 0" 
+                      class="ml-1 bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full">
+                  {{ filters['field'].length }}
+                </span>
+              </div>
+
+              <transition name="dropdown">
+                <div v-if="showFilter['field']"
+                     class="filter-dropdown absolute left-3 md:left-4 top-full mt-1 w-56 
+                            bg-slate-900 border border-slate-700 
+                            rounded-xl shadow-2xl z-50 p-2 
+                            max-h-48 overflow-y-auto
+                            will-change: transform">
+                  <div class="flex items-center justify-between px-2 py-1.5 border-b border-slate-800 mb-1">
+                    <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">篩選條件</span>
+                    <button @click.stop="filters['field'] = []; showFilter['field'] = false" 
+                            class="text-slate-500 hover:text-red-400 text-xs">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                  <label v-for="val in uniqueValuesMap['field']" :key="val"
+                         class="flex items-center gap-2.5 text-xs px-2 py-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer">
+                    <input type="checkbox"
+                           @click.stop
+                           class="w-4 h-4 rounded border-slate-600 text-blue-500 focus:ring-blue-500/30 
+                                  bg-slate-800 accent-blue-500 cursor-pointer checkbox-no-bubble"
+                           v-model="filters['field']" :value="val">
+                    <span class="truncate text-slate-300">
+                      {{ val === '' ? '(空值)' : val }}
+                    </span>
+                    <span class="ml-auto text-[10px] text-slate-600 flex-shrink-0">
+                      {{ logs.filter(l => l['field'] === val).length }}
+                    </span>
+                  </label>
+                  <div v-if="uniqueValuesMap['field'].length === 0" 
+                       class="px-2 py-3 text-center text-xs text-slate-500">
+                    無資料
+                  </div>
+                </div>
+              </transition>
+            </th>
+
+            <th class="col-old-value px-3 md:px-4 py-3 border-b border-slate-700 relative select-none">
+              <div class="flex items-center gap-1.5 cursor-pointer hover:text-blue-400 transition-colors"
+                   @click="toggleFilter('old_value')">
+                <span class="font-medium text-slate-300 nowrap">舊值</span>
+                <i class="fa-solid fa-chevron-down text-[9px] text-slate-500 transition-colors"
+                   :class="{'rotate-180 text-blue-400': showFilter['old_value']}"></i>
+                <span v-if="filters['old_value']?.length > 0" 
+                      class="ml-1 bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full">
+                  {{ filters['old_value'].length }}
+                </span>
+              </div>
+
+              <transition name="dropdown">
+                <div v-if="showFilter['old_value']"
+                     class="filter-dropdown absolute left-3 md:left-4 top-full mt-1 w-56 
+                            bg-slate-900 border border-slate-700 
+                            rounded-xl shadow-2xl z-50 p-2 
+                            max-h-48 overflow-y-auto
+                            will-change: transform">
+                  <div class="flex items-center justify-between px-2 py-1.5 border-b border-slate-800 mb-1">
+                    <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">篩選條件</span>
+                    <button @click.stop="filters['old_value'] = []; showFilter['old_value'] = false" 
+                            class="text-slate-500 hover:text-red-400 text-xs">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                  <label v-for="val in uniqueValuesMap['old_value']" :key="val"
+                         class="flex items-center gap-2.5 text-xs px-2 py-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer">
+                    <input type="checkbox"
+                           @click.stop
+                           class="w-4 h-4 rounded border-slate-600 text-blue-500 focus:ring-blue-500/30 
+                                  bg-slate-800 accent-blue-500 cursor-pointer checkbox-no-bubble"
+                           v-model="filters['old_value']" :value="val">
+                    <span class="truncate text-slate-300">
+                      {{ val === '' ? '(空值)' : val }}
+                    </span>
+                    <span class="ml-auto text-[10px] text-slate-600 flex-shrink-0">
+                      {{ logs.filter(l => l['old_value'] === val).length }}
+                    </span>
+                  </label>
+                  <div v-if="uniqueValuesMap['old_value'].length === 0" 
+                       class="px-2 py-3 text-center text-xs text-slate-500">
+                    無資料
+                  </div>
+                </div>
+              </transition>
+            </th>
+
+            <th class="col-new-value px-3 md:px-4 py-3 border-b border-slate-700 relative select-none">
+              <div class="flex items-center gap-1.5 cursor-pointer hover:text-blue-400 transition-colors"
+                   @click="toggleFilter('new_value')">
+                <span class="font-medium text-slate-300 nowrap">新值</span>
+                <i class="fa-solid fa-chevron-down text-[9px] text-slate-500 transition-colors"
+                   :class="{'rotate-180 text-blue-400': showFilter['new_value']}"></i>
+                <span v-if="filters['new_value']?.length > 0" 
+                      class="ml-1 bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded-full">
+                  {{ filters['new_value'].length }}
+                </span>
+              </div>
+
+              <transition name="dropdown">
+                <div v-if="showFilter['new_value']"
+                     class="filter-dropdown absolute left-3 md:left-4 top-full mt-1 w-56 
+                            bg-slate-900 border border-slate-700 
+                            rounded-xl shadow-2xl z-50 p-2 
+                            max-h-48 overflow-y-auto
+                            will-change: transform">
+                  <div class="flex items-center justify-between px-2 py-1.5 border-b border-slate-800 mb-1">
+                    <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wider">篩選條件</span>
+                    <button @click.stop="filters['new_value'] = []; showFilter['new_value'] = false" 
+                            class="text-slate-500 hover:text-red-400 text-xs">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                  </div>
+                  <label v-for="val in uniqueValuesMap['new_value']" :key="val"
+                         class="flex items-center gap-2.5 text-xs px-2 py-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer">
+                    <input type="checkbox"
+                           @click.stop
+                           class="w-4 h-4 rounded border-slate-600 text-blue-500 focus:ring-blue-500/30 
+                                  bg-slate-800 accent-blue-500 cursor-pointer checkbox-no-bubble"
+                           v-model="filters['new_value']" :value="val">
+                    <span class="truncate text-slate-300">
+                      {{ val === '' ? '(空值)' : val }}
+                    </span>
+                    <span class="ml-auto text-[10px] text-slate-600 flex-shrink-0">
+                      {{ logs.filter(l => l['new_value'] === val).length }}
+                    </span>
+                  </label>
+                  <div v-if="uniqueValuesMap['new_value'].length === 0" 
+                       class="px-2 py-3 text-center text-xs text-slate-500">
+                    無資料
+                  </div>
+                </div>
+              </transition>
+            </th>
+          </tr>
+        </thead>
+
+        <!-- Body -->
+        <tbody class="divide-y divide-slate-800/50">
+          <tr v-for="log in filteredLogs" :key="log.id"
+              class="table-row hover:bg-blue-500/5 transition-colors group">
+            
+            <!-- 時間 -->
+            <td class="col-time px-3 md:px-4 py-2.5 text-xs text-slate-500 font-mono nowrap">
+              {{ formatTime(log.time) }}
+            </td>
+            
+            <!-- 操作者 -->
+            <td class="col-username px-3 md:px-4 py-2.5">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 
+                           border border-blue-500/30 rounded-full text-xs font-medium 
+                           flex items-center justify-center text-blue-300 flex-shrink-0">
+                  {{ log.username?.[0]?.toUpperCase() || '?' }}
+                </div>
+                <span class="text-slate-200 font-medium nowrap">{{ log.username || '-' }}</span>
+              </div>
+            </td>
+            
+            <!-- 樓層 -->
+            <td class="col-floor px-3 md:px-4 py-2.5 text-xs">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-800 rounded-md">
+                <i class="fa-solid fa-layer-group text-slate-500 text-[10px]"></i>
+                <span class="text-cyan-400 font-medium nowrap">{{ (log.site || '-') + '-' + (log.floor || '-') }}</span>
+              </span>
+            </td>
+            
+            <!-- IP -->
+            <td class="col-ip px-3 md:px-4 py-2.5 text-xs font-mono nowrap">
+              <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded border border-amber-500/20">
+                {{ log.ip }}
+              </span>
+            </td>
+            
+            <!-- 欄位 -->
+            <td class="col-field px-3 md:px-4 py-2.5 text-xs nowrap">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-cyan-500/10 text-cyan-400 
+                         rounded border border-cyan-500/20 font-mono">
+                {{ log.field }}
+              </span>
+            </td>
+            
+            <!-- 舊值 -->
+            <td class="col-old-value px-3 md:px-4 py-2.5 text-xs font-mono nowrap">
+              <span v-if="log.old_value !== null && log.old_value !== ''" 
+                    class="px-2 py-0.5 bg-rose-500/10 text-rose-400 rounded border border-rose-500/20 line-through opacity-80">
+                {{ log.old_value }}
+              </span>
+              <span v-else class="text-slate-600 italic">—</span>
+            </td>
+            
+            <!-- 新值 -->
+            <td class="col-new-value px-3 md:px-4 py-2.5 text-xs font-mono nowrap">
+              <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded border border-emerald-500/20 font-medium">
+                {{ log.new_value }}
+              </span>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr v-if="filteredLogs.length === 0 && !loading" class="table-row">
+            <td colspan="7" class="py-16 text-center">
+              <div class="flex flex-col items-center gap-3">
+                <div class="w-14 h-14 bg-slate-800/50 rounded-2xl flex items-center justify-center">
+                  <i class="fa-regular fa-folder-open text-2xl text-slate-600"></i>
+                </div>
+                <div>
+                  <p class="text-slate-400 font-medium">無符合的紀錄</p>
+                  <p class="text-slate-600 text-xs mt-1">嘗試調整搜尋條件或篩選器</p>
+                </div>
+                <button @click="resetFilters" 
+                        class="mt-2 text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                  <i class="fa-solid fa-rotate-left"></i> 重設所有條件
+                </button>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Loading State -->
+          <tr v-if="loading" class="table-row">
+            <td colspan="7" class="py-12 text-center">
+              <div class="inline-flex items-center gap-2 text-slate-400">
+                <i class="fa-solid fa-circle-notch animate-spin text-blue-400"></i>
+                <span class="loading-dots">載入中</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <!-- Footer -->
+  <footer class="flex flex-col sm:flex-row justify-between items-center gap-3 
+                 text-xs text-slate-500 pt-3 border-t border-slate-800/50">
+    
+    <!-- 左下角：使用者資訊 -->
+    <div class="flex items-center gap-2.5 w-full sm:w-auto justify-center sm:justify-start">
+      <!-- 使用者頭像 -->
+      <div class="relative">
+        <div class="w-7 h-7 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 
+                   border border-emerald-500/30 rounded-full flex items-center justify-center 
+                   text-emerald-400 font-medium text-xs shadow-lg shadow-emerald-900/20">
+          <i class="fa-solid fa-user"></i>
+        </div>
+        <!-- 在線狀態指示器 -->
+        <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 
+                     border-2 border-[#0f172a] rounded-full animate-pulse"></span>
+      </div>
+      
+      <!-- 使用者名稱 + 角色 -->
+      <div class="flex flex-col leading-tight">
+        <span class="text-slate-200 font-medium text-xs">{{ username }}</span>
+      </div>
+    </div>
+
+    <!-- 中間：顯示筆數 (置中) -->
+    <div class="flex items-center gap-4 text-center justify-center flex-1 sm:flex-none">
+      <span class="text-slate-400">
+        顯示 <span class="text-white font-medium">{{ filteredLogs.length }}</span> 
+        / <span class="text-slate-300">{{ logs.length }}</span> 筆
+      </span>
+      <span v-if="activeFiltersCount > 0" 
+            class="hidden sm:inline-flex items-center gap-1 text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">
+        <i class="fa-solid fa-filter text-[10px]"></i> 
+        {{ activeFiltersCount }} 篩選中
+      </span>
+    </div>
+
+    <!-- 右側：自動重新載入開關 -->
+    <div class="flex items-center gap-3 w-full sm:w-auto justify-center sm:justify-end">
+      <span class="text-slate-600 text-xs hidden sm:inline">自動更新</span>
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" v-model="autoRefresh" class="sr-only peer">
+        <div class="w-9 h-5 bg-slate-700 peer-focus:ring-2 peer-focus:ring-blue-500/30 
+                    rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 
+                    after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white 
+                    after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 
+                    after:transition-all shadow-inner"></div>
+      </label>
+      <span class="text-slate-600 text-xs w-10 text-right">
+        {{ autoRefresh ? '30s' : 'Off' }}
+      </span>
+    </div>
+  </footer>
+
+</div>
+
+<script src="logpage.js"></script>
+
+</body>
+</html>

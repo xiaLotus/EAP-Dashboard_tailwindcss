@@ -1,0 +1,133 @@
+@import url("css2.css");
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+body {
+  overflow: hidden;
+  font-family: "Inter", system-ui, sans-serif;
+}
+.table-cell {
+  transition: background-color 0.15s ease;
+}
+
+/* Dropdown 動畫 - 僅透明度 + 微縮放，無位移避免跳動 */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+/* 強制 dropdown 定位穩定 */
+.filter-dropdown {
+  animation: none !important;
+  will-change: transform;
+}
+
+/* 標頭改為靜態定位，移除 sticky 動態效果 */
+thead {
+  position: static !important;
+  backdrop-filter: none !important;
+}
+
+/* ⭐ 表格容器 - 隔離重排重繪，防止選擇時跳動 */
+.table-container {
+  contain: content;
+  content-visibility: auto;
+}
+
+/* ⭐ 表格本體 - 固定佈局，防止列寬自動調整 */
+.audit-table {
+  table-layout: fixed !important;
+  width: 100%;
+}
+
+/* ⭐ 每列固定寬度 - 防止內容變化時寬度跳動 */
+.col-time {
+  width: 160px;
+  min-width: 160px;
+}
+.col-username {
+  width: 140px;
+  min-width: 140px;
+}
+.col-floor {
+  width: 100px;
+  min-width: 100px;
+}
+.col-ip {
+  width: 130px;
+  min-width: 130px;
+}
+.col-field {
+  width: 120px;
+  min-width: 120px;
+}
+.col-old-value {
+  width: 140px;
+  min-width: 140px;
+}
+.col-new-value {
+  width: 140px;
+  min-width: 140px;
+}
+
+/* ⭐ 防止文字換行造成寬度變化 */
+.nowrap {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ⭐ 表格行 - 固定高度，避免增減時重排 */
+.table-row {
+  height: 52px;
+}
+
+/* 防止文字選取造成閃爍 */
+.select-none {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ⭐ Checkbox 點擊時不觸發父元素更新 */
+.checkbox-no-bubble {
+  touch-action: manipulation;
+}
+
+.loading-dots::after {
+  content: "...";
+  animation: dots 1.5s steps(5, end) infinite;
+}
+@keyframes dots {
+  0%,
+  20% {
+    content: ".";
+  }
+  40% {
+    content: "..";
+  }
+  60%,
+  100% {
+    content: "...";
+  }
+}

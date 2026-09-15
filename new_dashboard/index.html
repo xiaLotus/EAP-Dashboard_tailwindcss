@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>網段設備看板</title>
+<link rel="stylesheet" href="static/css/css2.css">
+<link rel="stylesheet" href="static/css/all.min.css">
+<script src="static/js/vue.global.js"></script>
+<script src="static/js/sweetalert2@11.js"></script>
+<script src="static/js/axios.min.js"></script>
+
+<style>
+/* ===================== 色彩與基礎 ===================== */
+:root{
+    --bg:        #0f1620;
+    --panel:     #151d28;
+    --panel-2:   #1b2532;
+    --line:      #263242;
+    --line-soft: #1f2936;
+    --text:      #e6edf3;
+    --text-2:    #9aa8b8;
+    --text-3:    #66748a;
+    --blue:      #4c8dff;
+    --blue-soft: rgba(76,141,255,.14);
+    --green:     #3fb950;
+    --green-soft:rgba(63,185,80,.14);
+    --red:       #f0616b;
+    --red-soft:  rgba(240,97,107,.14);
+    --amber:     #e3b341;
+    --amber-soft:rgba(227,179,65,.14);
+    --mono: "JetBrains Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+    --sans: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+    --sb-w: 250px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input,select,textarea{font-family:inherit;color:inherit}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#2c3949;border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+#app{display:flex;height:100vh;width:100vw}
+
+/* ===================== 側欄 ===================== */
+.sidebar{
+    width:var(--sb-w);flex:0 0 var(--sb-w);
+    background:var(--panel);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;transition:margin-left .25s ease;
+}
+.sidebar.collapsed{margin-left:calc(var(--sb-w) * -1)}
+
+.sb-toggle-btn{
+    position:fixed;top:50%;z-index:60;width:22px;height:64px;border-radius:0 8px 8px 0;
+    background:var(--blue);color:#fff;border:0;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:2px 0 10px rgba(0,0,0,.35);
+    transition:left .25s ease,background .15s;transform:translateY(-50%);
+}
+.sb-toggle-btn:hover{background:#3f7ff2}
+.sb-toggle-btn svg{width:16px;height:16px;transition:transform .25s}
+
+.sb-brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px;border-bottom:1px solid var(--line)}
+.sb-brand-ic{width:34px;height:34px;border-radius:8px;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:15px}
+.sb-brand-title{font-size:15px;font-weight:600;letter-spacing:.2px}
+.sb-brand-sub{font-size:11px;color:var(--text-3);margin-top:1px}
+
+.tree-scroll{flex:1;overflow-y:auto;padding:10px 10px 6px}
+
+.site-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:7px;font-weight:600;font-size:14px;cursor:pointer;user-select:none}
+.site-row:hover{background:var(--panel-2)}
+.site-name{display:flex;align-items:center;gap:9px}
+.site-dot{width:7px;height:7px;border-radius:50%;background:var(--blue)}
+.t-arrow{font-size:9px;color:var(--text-3);transition:transform .2s;display:inline-block}
+.t-arrow.open{transform:rotate(90deg)}
+
+.floor-row{display:flex;align-items:center;justify-content:space-between;margin-left:16px;padding:6px 10px;border-radius:6px;font-size:13px;color:var(--text-2);cursor:pointer;user-select:none}
+.floor-row:hover{background:var(--panel-2);color:var(--text)}
+
+.db-item{display:flex;align-items:center;margin-left:16px;gap:4px}
+.db-item.no-floor{margin-left:0}
+.db-btn{
+    flex:1;display:flex;align-items:center;justify-content:space-between;
+    padding:6px 10px 6px 26px;border-radius:6px;
+    font-family:var(--mono);font-size:12.5px;color:var(--text-2);position:relative;text-align:left;
+}
+.db-btn::before{content:"";position:absolute;left:14px;top:50%;transform:translateY(-50%);width:4px;height:4px;border-radius:50%;background:var(--line)}
+.db-btn:hover{background:var(--panel-2);color:var(--text)}
+.db-btn.active{background:var(--blue-soft);color:var(--blue);font-weight:600}
+.db-btn.active::before{background:var(--blue)}
+.db-pulse{width:6px;height:6px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 0 rgba(76,141,255,.6);animation:pulse 1.6s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 6px rgba(76,141,255,0)}100%{box-shadow:0 0 0 0 rgba(76,141,255,0)}}
+.db-del{width:26px;height:26px;border-radius:6px;color:var(--text-3);font-size:11px;opacity:0;transition:opacity .15s,color .15s,background .15s}
+.db-item:hover .db-del{opacity:1}
+.db-del:hover{background:var(--red-soft);color:var(--red)}
+
+.sb-footer{padding:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.srch-wrap{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:0 10px;height:34px}
+.srch-wrap:focus-within{border-color:var(--blue)}
+.srch-wrap i{color:var(--text-3);font-size:12px}
+.srch-wrap input{flex:1;background:none;border:0;outline:0;font-size:13px;min-width:0}
+.srch-wrap input::placeholder{color:var(--text-3)}
+.srch-clear{color:var(--text-3);font-size:11px;padding:2px 4px}
+.srch-clear:hover{color:var(--text)}
+
+.act-btn{
+    display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:7px;font-size:13px;
+    border:1px solid var(--line);color:var(--text-2);background:var(--panel-2);
+    transition:background .15s,color .15s,border-color .15s;
+}
+.act-btn i{font-size:12px;width:14px;text-align:center}
+.act-btn:hover{color:var(--text);border-color:#32415a}
+.act-btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;justify-content:center}
+.act-btn.primary:hover{background:#3f7ff2}
+.act-btn .chev{margin-left:auto;font-size:10px;color:var(--text-3)}
+
+.user-bar{display:flex;align-items:center;gap:9px;padding:8px 4px 2px;font-size:12.5px;color:var(--text-2)}
+.online-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.user-name{font-weight:600;color:var(--text)}
+.user-tag{margin-left:auto;font-size:11px;color:var(--text-3)}
+
+/* ===================== 主區 ===================== */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+
+.top-bar{display:flex;align-items:center;gap:20px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.tb-title{min-width:180px}
+.tb-title-main{font-size:18px;font-weight:600;line-height:1.2}
+.tb-title-main .mono{font-family:var(--mono);font-weight:500;color:var(--blue)}
+.tb-title-sub{font-size:12px;color:var(--text-3);margin-top:3px}
+
+.metrics{display:flex;gap:10px;flex:1;flex-wrap:wrap;justify-content:flex-end}
+.metric{min-width:190px;flex:1;max-width:240px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+.metric-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.m-label{font-size:12px;color:var(--text-2)}
+.m-count{font-family:var(--mono);font-size:11px;color:var(--text-3)}
+.m-val{font-family:var(--mono);font-size:18px;font-weight:600;line-height:1}
+.prog-track{height:5px;background:var(--line-soft);border-radius:4px;margin-top:8px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.bg-red-500{background:var(--red)}
+.bg-yellow-400{background:var(--amber)}
+.bg-green-500{background:var(--green)}
+
+.filter-bar{display:flex;align-items:center;gap:8px;padding:10px 24px;border-bottom:1px solid var(--line-soft)}
+.filter-bar .sep{width:1px;height:18px;background:var(--line);margin:0 4px}
+.fbtn{height:28px;padding:0 12px;border-radius:14px;font-size:12.5px;border:1px solid var(--line);color:var(--text-2);transition:all .15s}
+.fbtn:hover{color:var(--text);border-color:#32415a}
+.f-cat  {background:var(--blue-soft);border-color:transparent;color:var(--blue);font-weight:600}
+.f-maint{background:var(--amber-soft);border-color:transparent;color:var(--amber);font-weight:600}
+.f-alive{background:var(--green-soft);border-color:transparent;color:var(--green);font-weight:600}
+.f-dead {background:var(--red-soft);border-color:transparent;color:var(--red);font-weight:600}
+.filter-count{margin-left:auto;font-size:12px;color:var(--text-3)}
+.filter-count b{color:var(--text-2);font-family:var(--mono);font-weight:500}
+
+.content{flex:1;overflow:auto;padding:16px 24px}
+
+/* ===== Excel 樣式表格 ===== */
+.sheet-wrap{background:#fff;border:1px solid #b7bcc4;border-radius:4px;overflow:auto;height:100%;color:#1f2328}
+.sheet{border-collapse:collapse;font-size:12.5px;white-space:nowrap;min-width:100%}
+.sheet th,.sheet td{border:1px solid #d4d8de;padding:0 8px;height:26px;line-height:26px;text-align:left}
+.sheet th{position:sticky;top:0;z-index:2;background:#f2f3f5;font-weight:600;color:#1f2328;border-bottom:2px solid #b7bcc4}
+.sheet th.rownum,.sheet td.rownum{position:sticky;left:0;background:#f2f3f5;color:#6b7280;text-align:center;width:44px;min-width:44px;font-family:var(--mono);font-size:11px;z-index:1}
+.sheet th.rownum{z-index:3}
+.sheet tbody tr{cursor:pointer}
+.sheet tbody tr:hover td{background:#e8f0fe}
+.sheet tbody tr:hover td.rownum{background:#dbe6fb}
+.sheet td.ip{font-family:var(--mono);font-size:12.5px}
+.sheet td.alive{color:#1a7f37;font-weight:600}
+.sheet td.dead{color:#c62828;font-weight:600}
+.sheet td.maint{color:#b26a00;font-weight:600}
+.sheet tr.zero td{background:#fff59d!important}
+.sheet tr.zero td.rownum{background:#ffe97a!important}
+.sheet td.locked{cursor:default;color:#6b7280}
+.sheet td.sel{outline:2px solid #1a73e8;outline-offset:-2px;background:#eaf1fd}
+.sheet tr.zero td.sel{background:#ffe97a!important}
+.sheet td.editing{padding:0;background:#fff!important;outline:2px solid #1a73e8;outline-offset:-2px}
+.sheet td.editing input,.sheet td.editing select{
+    width:100%;height:26px;border:0;outline:0;padding:0 8px;background:#fff;color:#1f2328;
+    font-size:12.5px;font-family:inherit;
+}
+.sheet td.ip.editing input{font-family:var(--mono)}
+.sheet tbody tr{cursor:cell}
+.sheet td{user-select:none}
+
+/* ===== Loading：頂部進度條 + 骨架表格 + 掃光轉場 ===== */
+.main{position:relative}
+
+/* Material 風格不確定進度條，貼在 main 最上緣 */
+.topbar-progress{position:absolute;left:0;right:0;top:0;height:3px;overflow:hidden;z-index:30;background:rgba(76,141,255,.15)}
+.topbar-progress::before,.topbar-progress::after{
+    content:"";position:absolute;top:0;bottom:0;background:var(--blue);border-radius:2px;
+}
+.topbar-progress::before{animation:ind1 2s cubic-bezier(.65,.815,.735,.395) infinite}
+.topbar-progress::after{animation:ind2 2s cubic-bezier(.165,.84,.44,1) 1.15s infinite}
+@keyframes ind1{0%{left:-35%;right:100%}60%{left:100%;right:-90%}100%{left:100%;right:-90%}}
+@keyframes ind2{0%{left:-200%;right:100%}60%{left:107%;right:-8%}100%{left:107%;right:-8%}}
+
+/* 骨架表格（跟真表格同尺寸，切換時不跳動） */
+.skeleton{background:#fff;border:1px solid #b7bcc4;border-radius:4px;height:100%;overflow:hidden}
+.sk-head{height:28px;background:#f2f3f5;border-bottom:2px solid #b7bcc4}
+.sk-row{display:flex;align-items:center;gap:12px;height:26px;padding:0 10px;border-bottom:1px solid #e6e8eb}
+.sk-cell{height:11px;border-radius:3px;background:#e9ebef;position:relative;overflow:hidden}
+.sk-cell::after{
+    content:"";position:absolute;inset:0;transform:translateX(-100%);
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);
+    animation:shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer{to{transform:translateX(100%)}}
+.sk-cell.n{width:28px;background:#dfe2e6}
+.sk-cell.w1{width:110px}.sk-cell.w2{width:80px}.sk-cell.w3{width:70px}.sk-cell.w4{width:180px}
+.sk-cell.w5{width:50px}.sk-cell.w6{width:64px}.sk-cell.w7{width:200px}.sk-cell.w8{width:44px}
+.sk-row:nth-child(odd) .sk-cell.w4{width:140px}
+
+/* 資料到位：表格淡入 + 逐列上浮 */
+.sheet-wrap{animation:sheetIn .25s ease-out both}
+@keyframes sheetIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.sheet tbody tr{animation:rowIn .32s cubic-bezier(.22,1,.36,1) both}
+@keyframes rowIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.fade-enter-active,.fade-leave-active{transition:opacity .18s}
+.fade-enter-from,.fade-leave-to{opacity:0}
+
+.empty-state{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text-3)}
+.empty-state i{font-size:34px;opacity:.5}
+.empty-state p{font-size:14px;color:var(--text-2)}
+.empty-state small{font-size:12px}
+
+.fade-enter-active,.fade-leave-active{transition:opacity .18s}
+.fade-enter-from,.fade-leave-to{opacity:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+    <!-- 側欄收合 -->
+    <button class="sb-toggle-btn"
+            :style="{ left: sidebarExpanded ? 'var(--sb-w)' : '0px' }"
+            :title="sidebarExpanded ? '收合側欄' : '展開側欄'"
+            @click="sidebarExpanded = !sidebarExpanded">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+             :style="{ transform: sidebarExpanded ? '' : 'rotate(180deg)' }">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
+        </svg>
+    </button>
+
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside class="sidebar" :class="{ collapsed: !sidebarExpanded }">
+
+        <div class="sb-brand">
+            <div class="sb-brand-ic"><i class="fa-solid fa-network-wired"></i></div>
+            <div>
+                <div class="sb-brand-title">網段設備看板</div>
+                <div class="sb-brand-sub">EAP / EQP / Switch</div>
+            </div>
+        </div>
+
+        <div class="tree-scroll">
+            <div v-for="(floors, site) in dbList" :key="site">
+
+                <div class="site-row" @click="toggleSite(site)">
+                    <span class="site-name"><span class="site-dot"></span>{{ site }}</span>
+                    <span class="t-arrow" :class="{ open: expandedSites[site] }">▶</span>
+                </div>
+
+                <div v-if="expandedSites[site]">
+                    <div v-for="(dbList, floor) in floors" :key="floor">
+
+                        <!-- floor 為空（例如 其他）就不顯示樓層列 -->
+                        <div v-if="floor" class="floor-row" @click="toggleFloor(site, floor)">
+                            <span class="floor-name">{{ floor }}</span>
+                            <span class="t-arrow" :class="{ open: expandedFloors[site+'_'+floor] }">▶</span>
+                        </div>
+
+                        <div v-if="!floor || expandedFloors[site+'_'+floor]">
+                            <div v-for="dbInfo in dbList" :key="dbInfo.label"
+                                 class="db-item" :class="{ 'no-floor': !floor }">
+
+                                <button class="db-btn"
+                                    :class="{ active: currentSite===site && currentFloor===floor && currentLabel===dbInfo.label }"
+                                    @click="selectDB(site, floor, dbInfo.label)">
+                                    <span>{{ dbInfo.label }}</span>
+                                    <span v-if="currentSite===site && currentFloor===floor && currentLabel===dbInfo.label"
+                                          class="db-pulse"></span>
+                                </button>
+
+                                <button class="db-del"
+                                        @click.stop="deleteNetwork(site, floor, dbInfo.label)"
+                                        title="刪除此網段">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sb-footer">
+            <div class="srch-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input v-model="searchKeyword" @keyup.enter="searchAllDevices" placeholder="搜尋所有網段：IP、機台、備註">
+                <button v-if="searchKeyword" class="srch-clear" @click="clearSearch" title="清除">✕</button>
+            </div>
+            <button @click="searchAllDevices" class="act-btn primary">
+                <i class="fa-solid fa-magnifying-glass"></i>搜尋
+            </button>
+            <button @click="addNetwork" class="act-btn">
+                <i class="fa-solid fa-plus"></i>新增網段
+                <i class="fa-solid fa-chevron-right chev"></i>
+            </button>
+            <button @click="goToAuditPage" class="act-btn">
+                <i class="fa-solid fa-clock-rotate-left"></i>修改紀錄
+                <i class="fa-solid fa-chevron-right chev"></i>
+            </button>
+            <div class="user-bar">
+                <div class="online-dot"></div>
+                <span class="user-name">{{ username }}</span>
+                <span class="user-tag">已登入</span>
+            </div>
+        </div>
+
+    </aside>
+
+    <!-- ═══ MAIN ═══ -->
+    <main class="main">
+        <div v-if="isLoading" class="topbar-progress"></div>
+
+        <div class="top-bar">
+            <div class="tb-title">
+                <div class="tb-title-main">
+                    <template v-if="currentLabel">
+                        {{ currentSite }}<template v-if="currentFloor">-{{ currentFloor }}</template>
+                        <span class="mono">{{ currentLabel }}</span>
+                    </template>
+                    <template v-else-if="searchKeyword && devices.length">搜尋結果</template>
+                    <template v-else>尚未選擇網段</template>
+                </div>
+                <div class="tb-title-sub">
+                    <template v-if="currentLabel">共 {{ devices.length }} 個 IP</template>
+                    <template v-else-if="searchKeyword && devices.length">「{{ searchKeyword }}」找到 {{ devices.length }} 筆</template>
+                    <template v-else>從左側選擇要查看的網段</template>
+                </div>
+            </div>
+
+            <div class="metrics">
+                <div class="metric">
+                    <div class="metric-head">
+                        <span class="m-label">IP 使用率 <span class="m-count">{{ stats.ip_len || '–' }}</span></span>
+                        <span class="m-val">{{ pct(stats.ip_use_percent) }}%</span>
+                    </div>
+                    <div class="prog-track"><div class="prog-fill" :class="getBarColorClass(stats.ip_use_percent)" :style="{ width: pct(stats.ip_use_percent) + '%' }"></div></div>
+                </div>
+                <div class="metric">
+                    <div class="metric-head">
+                        <span class="m-label">EAP 妥善率 <span class="m-count">{{ stats.ping_device || '–' }}</span></span>
+                        <span class="m-val">{{ pct(stats.ping_device_percent) }}%</span>
+                    </div>
+                    <div class="prog-track"><div class="prog-fill" :class="getBarColorClass(stats.ping_device_percent)" :style="{ width: pct(stats.ping_device_percent) + '%' }"></div></div>
+                </div>
+                <div class="metric">
+                    <div class="metric-head">
+                        <span class="m-label">EQP 妥善率 <span class="m-count">{{ stats.eqp_len || '–' }}</span></span>
+                        <span class="m-val">{{ pct(stats.eqp_len_percent) }}%</span>
+                    </div>
+                    <div class="prog-track"><div class="prog-fill" :class="getBarColorClass(stats.eqp_len_percent)" :style="{ width: pct(stats.eqp_len_percent) + '%' }"></div></div>
+                </div>
+                <div class="metric">
+                    <div class="metric-head">
+                        <span class="m-label">Switch 妥善率 <span class="m-count">{{ stats.switch_len || '–' }}</span></span>
+                        <span class="m-val">{{ pct(stats.switch_len_percent) }}%</span>
+                    </div>
+                    <div class="prog-track"><div class="prog-fill" :class="getBarColorClass(stats.switch_len_percent)" :style="{ width: pct(stats.switch_len_percent) + '%' }"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <button @click="toggleCategory('EAP')"    :class="['fbtn', selectedCategories.includes('EAP')    ? 'f-cat' : '']">EAP</button>
+            <button @click="toggleCategory('EQP')"    :class="['fbtn', selectedCategories.includes('EQP')    ? 'f-cat' : '']">EQP</button>
+            <button @click="toggleCategory('Switch')" :class="['fbtn', selectedCategories.includes('Switch') ? 'f-cat' : '']">Switch</button>
+            <span class="sep"></span>
+            <button @click="toggleMaintenance()" :class="['fbtn', maintenanceFilter ? 'f-maint' : '']">歲修中</button>
+            <button @click="cycleStatus()"
+                :class="['fbtn', statusFilter==='alive' ? 'f-alive' : statusFilter==='dead' ? 'f-dead' : '']">
+                <span v-if="statusFilter==='all'">全部狀態</span>
+                <span v-else-if="statusFilter==='alive'">● 連線中</span>
+                <span v-else>● 離線</span>
+            </button>
+            <span class="filter-count">顯示 <b>{{ filteredDevices.length }}</b> 筆</span>
+        </div>
+
+        <div class="content">
+            <div v-if="isLoading" class="skeleton">
+                <div class="sk-head"></div>
+                <div v-for="n in 18" :key="'sk'+n" class="sk-row">
+                    <span class="sk-cell n"></span>
+                    <span class="sk-cell w1"></span><span class="sk-cell w2"></span><span class="sk-cell w3"></span>
+                    <span class="sk-cell w4"></span><span class="sk-cell w5"></span><span class="sk-cell w5"></span>
+                    <span class="sk-cell w6"></span><span class="sk-cell w5"></span><span class="sk-cell w3"></span>
+                    <span class="sk-cell w6"></span><span class="sk-cell w2"></span><span class="sk-cell w8"></span>
+                    <span class="sk-cell w7"></span><span class="sk-cell w5"></span><span class="sk-cell w8"></span>
+                </div>
+            </div>
+
+            <div v-else-if="filteredDevices.length > 0" class="sheet-wrap" :key="'sheet'+loadTick">
+                <table class="sheet">
+                    <thead>
+                        <tr>
+                            <th class="rownum">#</th>
+                            <th v-for="col in columns" :key="col">{{ col }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="(item, i) in filteredDevices" :key="item.Internal_IP + i"
+                            :class="{ zero: isZeroIp(item) }"
+                            :style="{ animationDelay: (i < 40 ? i * 12 : 0) + 'ms' }">
+                            <td class="rownum">{{ i + 1 }}</td>
+
+                            <!-- 0.0.0.x：整列黃底、不顯示內容、不可編輯 -->
+                            <template v-if="isZeroIp(item)">
+                                <td v-for="(col, ci) in columns" :key="col" class="locked"
+                                    :class="{ sel: isSel(i, ci) }" @click="selectCell(i, ci)"></td>
+                            </template>
+
+                            <td v-else v-for="(col, ci) in columns" :key="col"
+                                :class="[cellClass(col, item[col]), { sel: isSel(i, ci), editing: isEditing(item, col), locked: !isEditable(col) }]"
+                                @click="selectCell(i, ci)"
+                                @dblclick="startEdit(item, col)">
+
+                                <template v-if="isEditing(item, col)">
+                                    <select v-if="selectOptions(col)"
+                                            v-model="editValue" v-focus="true"
+                                            @change="commitEdit(item, col)"
+                                            @blur="commitEdit(item, col)"
+                                            @keydown="onEditKey($event, item, col)">
+                                        <option v-for="o in selectOptions(col)" :key="o.v" :value="o.v">{{ o.t }}</option>
+                                    </select>
+                                    <input v-else
+                                           v-model="editValue" v-focus="editSelectAll"
+                                           @blur="commitEdit(item, col)"
+                                           @keydown="onEditKey($event, item, col)">
+                                </template>
+                                <template v-else>{{ item[col] }}</template>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div v-else class="empty-state">
+                <i class="fa-solid fa-server"></i>
+                <p v-if="devices.length">目前的篩選條件沒有符合的設備</p>
+                <p v-else>還沒有選擇網段</p>
+                <small v-if="devices.length">調整上方的分類或狀態篩選</small>
+                <small v-else>點左側的網段，或用搜尋找設備</small>
+            </div>
+        </div>
+
+    </main>
+
+</div>
+
+<script src="index.js"></script>
+</body>
+</html>
