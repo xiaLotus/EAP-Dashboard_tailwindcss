@@ -1,0 +1,29 @@
+{
+  "expandedSites": {
+    "K11": true,
+    "K18": false,
+    "K22": false,
+    "K25": false,
+    "其他": true
+  },
+  "expandedFloors": {
+    "K11_10F": true,
+    "K11_3F": false,
+    "K11_4F": false,
+    "K11_6F": false,
+    "K11_7F": true,
+    "K11_8F": false,
+    "K18_5F": true,
+    "K22_8F": true,
+    "K25_8F": false,
+    "K25_9F": false,
+    "其他_": true
+  },
+  "currentSite": "K11",
+  "currentFloor": "7F",
+  "currentLabel": "區網(60)",
+  "selectedCategories": [],
+  "maintenanceFilter": false,
+  "statusFilter": "all",
+  "page": 0
+}
