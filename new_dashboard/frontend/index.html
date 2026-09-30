@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>網段設備看板</title>
-<link rel="stylesheet" href="static/css/css2.css">
-<link rel="stylesheet" href="static/css/all.min.css">
-<script src="static/js/vue.global.js"></script>
-<script src="static/js/sweetalert2@11.js"></script>
-<script src="static/js/axios.min.js"></script>
+<link rel="stylesheet" href="../static/css/css2.css">
+<link rel="stylesheet" href="../static/css/all.min.css">
+<script src="../static/js/package/vue.global.js"></script>
+<script src="../static/js/package/sweetalert2@11.js"></script>
+<script src="../static/js/package/axios.min.js"></script>
 
 <style>
 /* ===================== 色彩與基礎 ===================== */
@@ -47,9 +47,10 @@ input,select,textarea{font-family:inherit;color:inherit}
 
 /* ===================== 側欄 ===================== */
 .sidebar{
-    width:var(--sb-w);flex:0 0 var(--sb-w);
+    width:var(--sb-w);flex:0 0 var(--sb-w);height:100vh;
     background:var(--panel);border-right:1px solid var(--line);
     display:flex;flex-direction:column;transition:margin-left .25s ease;
+    overflow:hidden;
 }
 .sidebar.collapsed{margin-left:calc(var(--sb-w) * -1)}
 
@@ -63,12 +64,13 @@ input,select,textarea{font-family:inherit;color:inherit}
 .sb-toggle-btn:hover{background:#3f7ff2}
 .sb-toggle-btn svg{width:16px;height:16px;transition:transform .25s}
 
-.sb-brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px;border-bottom:1px solid var(--line)}
+.sb-brand{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:18px 18px 14px;border-bottom:1px solid var(--line)}
 .sb-brand-ic{width:34px;height:34px;border-radius:8px;background:var(--blue-soft);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:15px}
 .sb-brand-title{font-size:15px;font-weight:600;letter-spacing:.2px}
 .sb-brand-sub{font-size:11px;color:var(--text-3);margin-top:1px}
 
-.tree-scroll{flex:1;overflow-y:auto;padding:10px 10px 6px}
+/* 樹狀區吃剩餘空間，可捲動；min-height:0 讓它能被壓縮，不會把底部擠出畫面 */
+.tree-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;padding:10px 10px 6px}
 
 .site-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:7px;font-weight:600;font-size:14px;cursor:pointer;user-select:none}
 .site-row:hover{background:var(--panel-2)}
@@ -97,8 +99,9 @@ input,select,textarea{font-family:inherit;color:inherit}
 .db-item:hover .db-del{opacity:1}
 .db-del:hover{background:var(--red-soft);color:var(--red)}
 
-.sb-footer{padding:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
-.srch-wrap{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:0 10px;height:34px}
+/* 底部固定高度，不被壓縮 */
+.sb-footer{flex-shrink:0;padding:12px 12px 14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.srch-wrap{flex-shrink:0;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:0 10px;height:34px}
 .srch-wrap:focus-within{border-color:var(--blue)}
 .srch-wrap i{color:var(--text-3);font-size:12px}
 .srch-wrap input{flex:1;background:none;border:0;outline:0;font-size:13px;min-width:0}
@@ -107,6 +110,7 @@ input,select,textarea{font-family:inherit;color:inherit}
 .srch-clear:hover{color:var(--text)}
 
 .act-btn{
+    flex-shrink:0;
     display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:7px;font-size:13px;
     border:1px solid var(--line);color:var(--text-2);background:var(--panel-2);
     transition:background .15s,color .15s,border-color .15s;
@@ -115,12 +119,20 @@ input,select,textarea{font-family:inherit;color:inherit}
 .act-btn:hover{color:var(--text);border-color:#32415a}
 .act-btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;justify-content:center}
 .act-btn.primary:hover{background:#3f7ff2}
+.act-btn.maint i:first-child{color:var(--amber)}
+.act-btn.maint:hover{border-color:rgba(227,179,65,.5)}
 .act-btn .chev{margin-left:auto;font-size:10px;color:var(--text-3)}
 
-.user-bar{display:flex;align-items:center;gap:9px;padding:8px 4px 2px;font-size:12.5px;color:var(--text-2)}
-.online-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
-.user-name{font-weight:600;color:var(--text)}
-.user-tag{margin-left:auto;font-size:11px;color:var(--text-3)}
+/* 登入者列：固定高度、文字不換行、名稱過長以 … 截斷 */
+.user-bar{
+    flex-shrink:0;display:flex;align-items:center;gap:9px;
+    min-height:36px;padding:0 10px;margin-top:2px;
+    background:var(--bg);border:1px solid var(--line-soft);border-radius:7px;
+    font-size:12.5px;line-height:1.4;color:var(--text-2);white-space:nowrap;
+}
+.online-dot{flex-shrink:0;width:8px;height:8px;border-radius:50%;background:var(--green)}
+.user-name{flex:1;min-width:0;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis}
+.user-tag{flex-shrink:0;font-size:11px;color:var(--text-3)}
 
 /* ===================== 主區 ===================== */
 .main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
@@ -187,7 +199,6 @@ input,select,textarea{font-family:inherit;color:inherit}
 /* ===== Loading：頂部進度條 + 骨架表格 + 掃光轉場 ===== */
 .main{position:relative}
 
-/* Material 風格不確定進度條，貼在 main 最上緣 */
 .topbar-progress{position:absolute;left:0;right:0;top:0;height:3px;overflow:hidden;z-index:30;background:rgba(76,141,255,.15)}
 .topbar-progress::before,.topbar-progress::after{
     content:"";position:absolute;top:0;bottom:0;background:var(--blue);border-radius:2px;
@@ -197,7 +208,6 @@ input,select,textarea{font-family:inherit;color:inherit}
 @keyframes ind1{0%{left:-35%;right:100%}60%{left:100%;right:-90%}100%{left:100%;right:-90%}}
 @keyframes ind2{0%{left:-200%;right:100%}60%{left:107%;right:-8%}100%{left:107%;right:-8%}}
 
-/* 骨架表格（跟真表格同尺寸，切換時不跳動） */
 .skeleton{background:#fff;border:1px solid #b7bcc4;border-radius:4px;height:100%;overflow:hidden}
 .sk-head{height:28px;background:#f2f3f5;border-bottom:2px solid #b7bcc4}
 .sk-row{display:flex;align-items:center;gap:12px;height:26px;padding:0 10px;border-bottom:1px solid #e6e8eb}
@@ -213,13 +223,10 @@ input,select,textarea{font-family:inherit;color:inherit}
 .sk-cell.w5{width:50px}.sk-cell.w6{width:64px}.sk-cell.w7{width:200px}.sk-cell.w8{width:44px}
 .sk-row:nth-child(odd) .sk-cell.w4{width:140px}
 
-/* 資料到位：表格淡入 + 逐列上浮 */
 .sheet-wrap{animation:sheetIn .25s ease-out both}
 @keyframes sheetIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .sheet tbody tr{animation:rowIn .32s cubic-bezier(.22,1,.36,1) both}
 @keyframes rowIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
-.fade-enter-active,.fade-leave-active{transition:opacity .18s}
-.fade-enter-from,.fade-leave-to{opacity:0}
 
 .empty-state{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text-3)}
 .empty-state i{font-size:34px;opacity:.5}
@@ -228,6 +235,70 @@ input,select,textarea{font-family:inherit;color:inherit}
 
 .fade-enter-active,.fade-leave-active{transition:opacity .18s}
 .fade-enter-from,.fade-leave-to{opacity:0}
+/* ===================== 新增網段 Modal（暖白） ===================== */
+.swal2-container.nw-backdrop{background:rgba(10,14,20,.55)!important;backdrop-filter:blur(3px)}
+.swal2-popup.nw-popup{
+    --w-bg:#faf8f4; --w-card:#ffffff; --w-line:#ebe5da; --w-line-2:#dcd4c6;
+    --w-text:#2b2723; --w-text-2:#6f665a; --w-text-3:#a89e8f; --w-accent:#3b6fd8;
+    background:var(--w-bg);color:var(--w-text);font-family:var(--sans);
+    width:520px;max-width:calc(100vw - 32px);padding:0;border-radius:14px;
+    box-shadow:0 24px 60px rgba(0,0,0,.35);
+}
+.nw-popup .swal2-html-container.nw-html{margin:0;padding:0;text-align:left;overflow:visible}
+
+.nw-head{display:flex;align-items:center;gap:12px;padding:22px 24px 16px;border-bottom:1px solid var(--w-line)}
+.nw-head-ic{width:40px;height:40px;border-radius:10px;background:#f1e9dc;color:#9a7440;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.nw-head-title{font-size:17px;font-weight:600;color:var(--w-text);line-height:1.3}
+.nw-head-sub{font-size:12px;color:var(--w-text-3);margin-top:2px}
+
+.nw-body{padding:18px 24px 8px;display:flex;flex-direction:column;gap:14px}
+.nw-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.nw-row.three{grid-template-columns:repeat(3,1fr)}
+.nw-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.nw-label{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--w-text-2)}
+.nw-label .req{color:#c2410c;font-weight:700}
+.nw-label .opt{font-weight:400;color:var(--w-text-3);font-size:11.5px}
+.nw-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.nw-dot.eap{background:#3b6fd8}.nw-dot.eqp{background:#2f9e44}.nw-dot.sw{background:#d08a12}
+
+.nw-input{
+    width:100%;height:38px;padding:0 12px;border:1px solid var(--w-line-2);border-radius:8px;
+    background:var(--w-card);color:var(--w-text);font-size:14px;outline:0;
+    transition:border-color .15s,box-shadow .15s;
+}
+.nw-input::placeholder{color:#c2b8a8}
+.nw-input:hover{border-color:#cfc5b4}
+.nw-input:focus{border-color:var(--w-accent);box-shadow:0 0 0 3px rgba(59,111,216,.15)}
+.nw-input.mono{font-family:var(--mono);letter-spacing:.2px}
+.nw-input.num{font-family:var(--mono);text-align:center}
+.nw-hint{font-size:11.5px;color:var(--w-text-3)}
+
+.nw-section{
+    display:flex;align-items:center;gap:8px;margin-top:2px;padding-top:12px;
+    border-top:1px dashed var(--w-line);font-size:11.5px;font-weight:600;letter-spacing:.6px;color:var(--w-text-3);
+}
+
+.nw-total{margin-left:auto;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:0;padding:2px 8px;border-radius:10px;background:#f1ece3;color:var(--w-text-2)}
+.nw-total.ok{background:#e6f4ea;color:#2f7d3a}
+.nw-total.over{background:#fdf0ea;color:#b4431b}
+
+.nw-popup .swal2-validation-message{
+    margin:4px 24px 0;padding:8px 12px;border-radius:8px;
+    background:#fdf0ea;color:#b4431b;font-size:12.5px;justify-content:flex-start;
+}
+.nw-popup .swal2-actions.nw-actions{width:100%;margin:0;padding:14px 24px 20px;justify-content:flex-end;gap:10px}
+.nw-btn{height:36px;padding:0 18px;border-radius:8px;font-size:13.5px;font-weight:600;border:1px solid transparent;transition:background .15s,color .15s,border-color .15s}
+.nw-btn i{margin-right:6px;font-size:12px}
+.nw-confirm{background:var(--w-accent);color:#fff}
+.nw-confirm:hover{background:#315fc2}
+.nw-cancel{background:transparent;border-color:var(--w-line-2);color:var(--w-text-2)}
+.nw-cancel:hover{background:#f2ece2;color:var(--w-text)}
+
+@media (max-width:480px){
+    .nw-row{grid-template-columns:1fr}
+    .nw-row.three{grid-template-columns:repeat(3,1fr)}
+}
+
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -258,7 +329,7 @@ input,select,textarea{font-family:inherit;color:inherit}
         </div>
 
         <div class="tree-scroll">
-            <div v-for="(floors, site) in dbList" :key="site">
+           <div v-for="(floors, site) in sortedDbList" :key="site">
 
                 <div class="site-row" @click="toggleSite(site)">
                     <span class="site-name"><span class="site-dot"></span>{{ site }}</span>
@@ -312,11 +383,15 @@ input,select,textarea{font-family:inherit;color:inherit}
                 <i class="fa-solid fa-plus"></i>新增網段
                 <i class="fa-solid fa-chevron-right chev"></i>
             </button>
+            <button @click="goToMaintenancePage" class="act-btn maint">
+                <i class="fa-solid fa-screwdriver-wrench"></i>歲修
+                <i class="fa-solid fa-chevron-right chev"></i>
+            </button>
             <button @click="goToAuditPage" class="act-btn">
                 <i class="fa-solid fa-clock-rotate-left"></i>修改紀錄
                 <i class="fa-solid fa-chevron-right chev"></i>
             </button>
-            <div class="user-bar">
+            <div class="user-bar" :title="username">
                 <div class="online-dot"></div>
                 <span class="user-name">{{ username }}</span>
                 <span class="user-tag">已登入</span>
@@ -464,6 +539,6 @@ input,select,textarea{font-family:inherit;color:inherit}
 
 </div>
 
-<script src="index.js"></script>
+<script src="../static/js/index.js"></script>
 </body>
 </html>

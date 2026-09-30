@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASEF 各站點資料確認</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #fefbf3 0%, #f7f3e9 50%, #f1ede4 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(230, 230, 230, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        
+        .slide-up {
+            animation: slideUp 0.6s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* 自定義滾動條 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 3px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        /* 項目網格 */
+        .item-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.5rem;
+        }
+
+        /* SweetAlert2 暖色調 */
+        .swal2-popup {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+        }
+        
+        .swal2-title, .swal2-html-container {
+            color: #374151 !important;
+        }
+        
+        .swal2-input, .swal2-select {
+            background: #f9fafb !important;
+            border: 1px solid #d1d5db !important;
+            color: #374151 !important;
+        }
+    </style>
+</head>
+<body class="gradient-bg text-gray-800">
+    <div id="app" class="h-screen p-3 flex flex-col overflow-hidden">
+        
+        <!-- 左上角返回按鈕 -->
+        <div class="fixed top-3 left-3 z-50">
+            <button @click="goToPost" 
+                    class="flex items-center gap-2 px-3 py-1.5 glass-card rounded-xl hover:bg-white/80 transition-all duration-300 transform hover:scale-105 shadow-lg text-gray-700 font-medium text-sm">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                <span class="hidden md:inline">返回過帳率查閱</span>
+            </button>
+        </div>
+
+        <!-- 右上角重新載入按鈕 -->
+        <div class="fixed top-3 right-3 z-50">
+            <button @click="loadData" 
+                    :disabled="loading"
+                    class="flex items-center gap-2 px-3 py-1.5 glass-card rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg text-gray-700 font-medium text-sm"
+                    :class="{
+                        'hover:bg-white/80 cursor-pointer': !loading,
+                        'opacity-75 cursor-not-allowed': loading
+                    }">
+                <i data-lucide="refresh-cw" :class="{'animate-spin': loading}" class="w-4 h-4"></i>
+                <span class="hidden md:inline">{{ loading ? '載入中...' : '重新載入' }}</span>
+            </button>
+        </div>
+
+        <!-- 標題區域 -->
+        <div class="text-center mb-3 pt-10 fade-in flex-shrink-0">
+            <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-amber-600 via-orange-500 to-red-500 bg-clip-text text-transparent mb-1">
+                ASEF 各站點資料確認
+            </h1>
+            <p class="text-sm text-gray-600">管理和確認各站點資料狀態</p>
+            <div class="w-16 h-1 bg-gradient-to-r from-amber-500 to-orange-500 mx-auto mt-2 rounded-full"></div>
+        </div>
+
+        <!-- 檔案選擇按鈕 -->
+        <div class="flex justify-center gap-2 mb-3 fade-in flex-shrink-0">
+            <button 
+                v-for="file in files" 
+                :key="file"
+                @click="selectFile(file)"
+                class="tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-sm shadow-lg border-2 transition-all duration-300"
+                :class="selectedFile === file 
+                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-400' 
+                    : 'glass-card text-gray-700 border-transparent hover:border-blue-300'">
+                <i data-lucide="database" class="w-4 h-4"></i>
+                {{ file }}
+            </button>
+
+            <!-- 新增分類按鈕 -->
+            <button 
+                v-if="selectedFile"
+                @click="showAddCategoryModal"
+                class="tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-sm shadow-lg border-2 transition-all duration-300 bg-gradient-to-r from-green-500 to-emerald-500 text-white border-green-400">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                新增分類
+            </button>
+        </div>
+
+        <!-- 搜尋欄 -->
+        <div v-if="selectedFile" class="glass-card rounded-xl p-2.5 mb-3 fade-in flex-shrink-0">
+            <div class="flex items-center gap-3 max-w-xl mx-auto">
+                <i data-lucide="search" class="w-5 h-5 text-gray-400"></i>
+                <input 
+                    v-model="searchQuery"
+                    type="text" 
+                    placeholder="搜尋分類或項目代碼..."
+                    class="flex-1 px-3 py-2 bg-white/50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-gray-700 text-sm">
+                <span class="text-sm text-gray-500">
+                    {{ Object.keys(filteredData).length }} 個分類
+                </span>
+            </div>
+        </div>
+
+        <!-- 主要內容區 -->
+        <div v-if="selectedFile" class="glass-card rounded-xl p-4 flex-1 overflow-auto custom-scrollbar slide-up">
+            
+            <!-- 資料列表 -->
+            <div class="space-y-4">
+                <div 
+                    v-for="(items, category) in filteredData" 
+                    :key="category"
+                    class="glass-card rounded-xl p-4 card-hover">
+                    
+                    <!-- 分類標題 -->
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                            <i data-lucide="folder" class="w-5 h-5 text-amber-500"></i>
+                            分類: {{ category }}
+                        </h4>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-lg">
+                                {{ Object.keys(items).length }} 個項目
+                            </span>
+                            <button 
+                                @click="showAddItemModal(category)"
+                                class="px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm rounded-lg hover:from-green-600 hover:to-emerald-600 font-medium flex items-center gap-1">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                新增
+                            </button>
+                            <button 
+                                @click="deleteCategory(category)"
+                                class="px-3 py-1.5 bg-gradient-to-r from-red-500 to-rose-500 text-white text-sm rounded-lg hover:from-red-600 hover:to-rose-600 font-medium flex items-center gap-1">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                刪除
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 項目列表 -->
+                    <div class="item-grid">
+                        <div 
+                            v-for="(value, itemCode) in items" 
+                            :key="itemCode"
+                            class="flex items-center justify-between bg-white/60 rounded-lg p-2.5 group hover:bg-white/80 transition-colors border border-gray-100">
+                            <span class="font-mono text-sm font-medium text-gray-700 truncate" :title="itemCode">{{ itemCode }}</span>
+                            <div class="flex items-center gap-1.5">
+                                <span 
+                                    @click="editItem(category, itemCode, value)"
+                                    :class="[
+                                        'px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer hover:opacity-80 transition-opacity',
+                                        value === 'V' ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' : 
+                                        'bg-gray-200 text-gray-500'
+                                    ]">
+                                    {{ value || '空白' }}
+                                </span>
+                                <button 
+                                    @click="deleteItem(category, itemCode)"
+                                    class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-500 transition-all p-1">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 無資料提示 -->
+            <div v-if="Object.keys(filteredData).length === 0" class="text-center text-gray-500 py-16">
+                <i data-lucide="search" class="w-16 h-16 mx-auto mb-4 text-gray-300"></i>
+                <p class="text-lg">沒有找到符合的資料</p>
+            </div>
+        </div>
+
+        <!-- 歡迎訊息 -->
+        <div v-else class="flex-1 flex flex-col items-center justify-center text-gray-500">
+            <i data-lucide="mouse-pointer-click" class="w-20 h-20 mb-4 text-gray-300"></i>
+            <p class="text-xl">請選擇要管理的檔案</p>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div v-if="loading" class="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+            <div class="glass-card rounded-2xl p-6 flex items-center gap-4">
+                <div class="loading-spinner w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full"></div>
+                <span class="text-lg text-gray-700">載入中...</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        const API_BASE_URL = 'http://127.0.0.1:5000/api';
+
+        createApp({
+            data() {
+                return {
+                    files: ['ASEF1', 'ASEF3', 'ASEF5'],
+                    selectedFile: '',
+                    data: {},
+                    loading: false,
+                    searchQuery: ''
+                };
+            },
+            mounted() {
+                // 載入時恢復上次選擇
+                const lastSelected = localStorage.getItem('selectedFile');
+                if (lastSelected && this.files.includes(lastSelected)) {
+                    this.selectFile(lastSelected);
+                }
+                lucide.createIcons();
+            },
+            updated() {
+                lucide.createIcons();
+            },
+            computed: {
+                filteredData() {
+                    if (!this.searchQuery) {
+                        return this.data;
+                    }
+                    
+                    const query = this.searchQuery.toLowerCase();
+                    const filtered = {};
+                    
+                    for (const [category, items] of Object.entries(this.data)) {
+                        // 搜尋分類名稱
+                        if (category.toLowerCase().includes(query)) {
+                            filtered[category] = items;
+                            continue;
+                        }
+                        
+                        // 搜尋項目代碼
+                        const matchingItems = {};
+                        for (const [itemCode, value] of Object.entries(items)) {
+                            if (itemCode.toLowerCase().includes(query)) {
+                                matchingItems[itemCode] = value;
+                            }
+                        }
+                        
+                        if (Object.keys(matchingItems).length > 0) {
+                            filtered[category] = matchingItems;
+                        }
+                    }
+                    
+                    return filtered;
+                }
+            },
+            methods: {
+                async selectFile(filename) {
+                    this.selectedFile = filename;
+                    localStorage.setItem('selectedFile', filename);
+                    await this.loadData();
+                },
+                
+                async loadData() {
+                    if (!this.selectedFile) return;
+                    
+                    try {
+                        this.loading = true;
+                        const response = await fetch(`${API_BASE_URL}/${this.selectedFile}`);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        this.data = await response.json();
+                        
+                        if (this.data.error) {
+                            throw new Error(this.data.error);
+                        }
+                        
+                    } catch (error) {
+                        console.error('載入資料失敗:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: '載入失敗',
+                            text: `無法載入 ${this.selectedFile} 資料: ${error.message}`,
+                            background: 'rgba(255, 255, 255, 0.95)',
+                            color: '#374151'
+                        });
+                        this.data = {};
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async showAddCategoryModal() {
+                    const { value: categoryId } = await Swal.fire({
+                        title: '新增分類',
+                        input: 'text',
+                        inputLabel: '分類代碼',
+                        inputPlaceholder: '請輸入分類代碼 (例: 2190)',
+                        showCancelButton: true,
+                        confirmButtonText: '新增',
+                        cancelButtonText: '取消',
+                        confirmButtonColor: '#f59e0b',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        color: '#374151'
+                    });
+                    
+                    if (categoryId) {
+                        await this.addCategory(categoryId.trim());
+                    }
+                },
+                
+                async addCategory(categoryId) {
+                    try {
+                        this.loading = true;
+                        const response = await fetch(`${API_BASE_URL}/${this.selectedFile}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ category_id: categoryId })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '新增成功',
+                                text: result.message,
+                                background: 'rgba(255, 255, 255, 0.95)',
+                                color: '#374151',
+                                confirmButtonColor: '#f59e0b'
+                            });
+                            await this.loadData();
+                        } else {
+                            throw new Error(result.error);
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '新增失敗',
+                            text: error.message,
+                            background: 'rgba(255, 255, 255, 0.95)',
+                            color: '#374151'
+                        });
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async deleteCategory(categoryId) {
+                    const result = await Swal.fire({
+                        title: '確認刪除',
+                        text: `確定要刪除分類 ${categoryId} 及其所有項目嗎？`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ef4444',
+                        cancelButtonColor: '#6b7280',
+                        confirmButtonText: '確定刪除',
+                        cancelButtonText: '取消',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        color: '#374151'
+                    });
+                    
+                    if (result.isConfirmed) {
+                        try {
+                            this.loading = true;
+                            const response = await fetch(`${API_BASE_URL}/${this.selectedFile}/${encodeURIComponent(categoryId)}`, {
+                                method: 'DELETE'
+                            });
+                            
+                            const data = await response.json();
+                            
+                            if (response.ok) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '刪除成功',
+                                    text: data.message,
+                                    background: 'rgba(255, 255, 255, 0.95)',
+                                    color: '#374151',
+                                    confirmButtonColor: '#f59e0b'
+                                });
+                                await this.loadData();
+                            } else {
+                                throw new Error(data.error);
+                            }
+                            
+                        } catch (error) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: '刪除失敗',
+                                text: error.message,
+                                background: 'rgba(255, 255, 255, 0.95)',
+                                color: '#374151'
+                            });
+                        } finally {
+                            this.loading = false;
+                        }
+                    }
+                },
+                
+                async showAddItemModal(categoryId) {
+                    const { value: formValues } = await Swal.fire({
+                        title: `新增項目到 ${categoryId}`,
+                        html: `
+                            <input id="itemCode" class="swal2-input" placeholder="項目代碼" style="background: #f9fafb; border: 1px solid #d1d5db; color: #374151;">
+                            <select id="itemValue" class="swal2-input" style="background: #f9fafb; border: 1px solid #d1d5db; color: #374151;">
+                                <option value="">空白</option>
+                                <option value="V">V</option>
+                            </select>
+                        `,
+                        focusConfirm: false,
+                        showCancelButton: true,
+                        confirmButtonText: '新增',
+                        cancelButtonText: '取消',
+                        confirmButtonColor: '#f59e0b',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        color: '#374151',
+                        preConfirm: () => {
+                            return {
+                                itemCode: document.getElementById('itemCode').value,
+                                itemValue: document.getElementById('itemValue').value
+                            }
+                        }
+                    });
+                    
+                    if (formValues && formValues.itemCode) {
+                        await this.addItem(categoryId, formValues.itemCode.trim(), formValues.itemValue);
+                    }
+                },
+                
+                async addItem(categoryId, itemCode, itemValue) {
+                    try {
+                        this.loading = true;
+                        const response = await fetch(`${API_BASE_URL}/${this.selectedFile}/${encodeURIComponent(categoryId)}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ 
+                                item_code: itemCode,
+                                item_value: itemValue 
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '新增成功',
+                                text: result.message,
+                                background: 'rgba(255, 255, 255, 0.95)',
+                                color: '#374151',
+                                confirmButtonColor: '#f59e0b'
+                            });
+                            await this.loadData();
+                        } else {
+                            throw new Error(result.error);
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '新增失敗',
+                            text: error.message,
+                            background: 'rgba(255, 255, 255, 0.95)',
+                            color: '#374151'
+                        });
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async editItem(categoryId, itemCode, currentValue) {
+                    const { value: newValue } = await Swal.fire({
+                        title: `修改項目 ${itemCode}`,
+                        html: `
+                            <select id="itemValue" class="swal2-input" style="background: #f9fafb; border: 1px solid #d1d5db; color: #374151;">
+                                <option value="" ${currentValue === '' ? 'selected' : ''}>空白</option>
+                                <option value="V" ${currentValue === 'V' ? 'selected' : ''}>V</option>
+                            </select>
+                        `,
+                        focusConfirm: false,
+                        showCancelButton: true,
+                        confirmButtonText: '修改',
+                        cancelButtonText: '取消',
+                        confirmButtonColor: '#f59e0b',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        color: '#374151',
+                        preConfirm: () => {
+                            return document.getElementById('itemValue').value;
+                        }
+                    });
+                    
+                    if (newValue !== undefined) {
+                        await this.updateItem(categoryId, itemCode, newValue);
+                    }
+                },
+                
+                async updateItem(categoryId, itemCode, newValue) {
+                    try {
+                        this.loading = true;
+                        const response = await fetch(`${API_BASE_URL}/${this.selectedFile}/${encodeURIComponent(categoryId)}/${encodeURIComponent(itemCode)}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ item_value: newValue })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '修改成功',
+                                text: result.message,
+                                background: 'rgba(255, 255, 255, 0.95)',
+                                color: '#374151',
+                                confirmButtonColor: '#f59e0b'
+                            });
+                            await this.loadData();
+                        } else {
+                            throw new Error(result.error);
+                        }
+                        
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '修改失敗',
+                            text: error.message,
+                            background: 'rgba(255, 255, 255, 0.95)',
+                            color: '#374151'
+                        });
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async deleteItem(categoryId, itemCode) {
+                    const result = await Swal.fire({
+                        title: '確認刪除',
+                        text: `確定要刪除項目 ${itemCode} 嗎？`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ef4444',
+                        cancelButtonColor: '#6b7280',
+                        confirmButtonText: '確定刪除',
+                        cancelButtonText: '取消',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        color: '#374151'
+                    });
+                    
+                    if (result.isConfirmed) {
+                        try {
+                            this.loading = true;
+                            const response = await fetch(`${API_BASE_URL}/${this.selectedFile}/${encodeURIComponent(categoryId)}/${encodeURIComponent(itemCode)}`, {
+                                method: 'DELETE'
+                            });
+                            
+                            const data = await response.json();
+                            
+                            if (response.ok) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '刪除成功',
+                                    text: data.message,
+                                    background: 'rgba(255, 255, 255, 0.95)',
+                                    color: '#374151',
+                                    confirmButtonColor: '#f59e0b'
+                                });
+                                await this.loadData();
+                            } else {
+                                throw new Error(data.error);
+                            }
+                            
+                        } catch (error) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: '刪除失敗',
+                                text: error.message,
+                                background: 'rgba(255, 255, 255, 0.95)',
+                                color: '#374151'
+                            });
+                        } finally {
+                            this.loading = false;
+                        }
+                    }
+                },
+                
+                goToPost() {
+                    localStorage.setItem('selectedFile', this.selectedFile);
+                    window.location.href = 'postMCID.html';
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

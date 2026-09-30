@@ -119,8 +119,62 @@ Vue.createApp({
                 'Internal_IP', 'Machine_ID', 'Local', 'Device_Name',
                 'TCP_Port', 'COM_Port', 'OS_Spec', 'IP_Source',
                 'Category', 'Online_Test', 'Set_Time', 'Remark',
-                '歲修', 'File_Place', '所在區域(柱位)', 'alive_or_dead'
+                '歲修', 'File_Place', '所在區域(柱位)', 'alive_or_dead', "是否派報"
             ];
+        },
+        sortedDbList() {
+            // 自然排序函數 (能正確處理 1F, 2F, 10F 這種字串)
+            const naturalSort = (a, b) => {
+                const re = /(\d+)|(\D+)/g;
+                const aParts = (a || '').match(re) || [];
+                const bParts = (b || '').match(re) || [];
+                for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+                    const aPart = aParts[i] || '';
+                    const bPart = bParts[i] || '';
+                    const aNum = parseInt(aPart, 10);
+                    const bNum = parseInt(bPart, 10);
+
+                    // 如果兩段都是數字，比數字大小
+                    if (!isNaN(aNum) && !isNaN(bNum)) {
+                        if (aNum !== bNum) return aNum - bNum;
+                    } else {
+                        // 否則比字串 (加入 'zh-TW' 讓中文排序更穩定)
+                        const cmp = aPart.localeCompare(bPart, 'zh-TW');
+                        if (cmp !== 0) return cmp;
+                    }
+                }
+                return 0;
+            };
+
+            const result = {};
+
+            // 1. 取出所有 Site 並排序 (如果 Site 也有「其他」，同樣放到最後)
+            const sortedSites = Object.keys(this.dbList).sort((a, b) => {
+                if (a === '其他') return 1;
+                if (b === '其他') return -1;
+                return naturalSort(a, b);
+            });
+
+            for (const site of sortedSites) {
+                const floorsObj = this.dbList[site];
+
+                // 2. 取出該 Site 下的所有 Floor 並排序
+                const sortedFloors = Object.keys(floorsObj).sort((a, b) => {
+                    // ⭐ 核心修改：如果其中一個是「其他」，強制排到最後面
+                    if (a === '其他') return 1;
+                    if (b === '其他') return -1;
+                    // 其餘樓層使用自然排序 (1F, 2F, 10F...)
+                    return naturalSort(a, b);
+                });
+
+                // 3. 按照排好的順序重新組建 Object (確保 Vue v-for 遍歷順序正確)
+                const sortedFloorsObj = {};
+                for (const floor of sortedFloors) {
+                    sortedFloorsObj[floor] = floorsObj[floor];
+                }
+                result[site] = sortedFloorsObj;
+            }
+            return result;
         },
 
         totalPages() {
@@ -132,13 +186,13 @@ Vue.createApp({
 
         toggleSite(site) {
             this.expandedSites[site] = !this.expandedSites[site];
-            this.saveState()   
+            this.saveState()
         },
 
         toggleFloor(site, floor) {
             const key = site + '_' + floor;
             this.expandedFloors[key] = !this.expandedFloors[key];
-            this.saveState()   
+            this.saveState()
         },
 
         toggleCategory(cat) {
@@ -146,14 +200,14 @@ Vue.createApp({
             i > -1 ? this.selectedCategories.splice(i, 1) : this.selectedCategories.push(cat);
             this.page = 0;
 
-            this.saveState()   
+            this.saveState()
         },
 
         toggleMaintenance() {
             this.maintenanceFilter = !this.maintenanceFilter;
             this.page = 0;
 
-            this.saveState()   
+            this.saveState()
         },
 
         cycleStatus() {
@@ -162,17 +216,17 @@ Vue.createApp({
                 this.statusFilter === 'alive' ? 'dead' : 'all';
 
             this.page = 0;
-            this.saveState()   
+            this.saveState()
         },
 
         nextPage() {
             this.page = (this.page + 1) % this.totalPages;
-            this.saveState()   
+            this.saveState()
         },
 
         prevPage() {
             this.page = (this.page - 1 + this.totalPages) % this.totalPages;
-            this.saveState()   
+            this.saveState()
         },
 
         async fetchDBList() {
@@ -232,7 +286,7 @@ Vue.createApp({
 
             }, 300)
         },
-        
+
         async fetchData() {
             if (!this.currentSite || !this.currentLabel) return;
 
@@ -261,6 +315,13 @@ Vue.createApp({
             // ⭐ 存使用者名稱
             localStorage.setItem('username', this.username)
             window.location.href = "log.html"
+        },
+
+        // ⭐ 歲修頁面（檔名請依實際頁面調整）
+        goToMaintenancePage() {
+            localStorage.setItem('isLogin', 'true')
+            localStorage.setItem('username', this.username)
+            window.location.href = "lab.html"
         },
 
         async loadState() {
@@ -293,47 +354,92 @@ Vue.createApp({
 addNetwork() {
 
     Swal.fire({
-        title: '新增區網',
         html: `
-        <div class="text-left space-y-3">
-
-            <div>
-                <label class="text-xs text-gray-400">棟別</label>
-                <input id="swal-site" class="swal2-input" placeholder="例如：K11">
+            <div class="nw-head">
+                <div class="nw-head-ic"><i class="fa-solid fa-network-wired"></i></div>
+                <div>
+                    <div class="nw-head-title">新增區網</div>
+                    <div class="nw-head-sub">三種設備數量合計需為 254</div>
+                </div>
             </div>
+            <div class="nw-body">
+                <div class="nw-row">
+                    <div class="nw-field">
+                        <label class="nw-label" for="swal-site">棟別 <span class="req">*</span></label>
+                        <input id="swal-site" class="nw-input" placeholder="例如：K11" autocomplete="off">
+                    </div>
+                    <div class="nw-field">
+                        <label class="nw-label" for="swal-floor">樓層 <span class="req">*</span></label>
+                        <input id="swal-floor" class="nw-input" placeholder="例如：3F" autocomplete="off">
+                    </div>
+                </div>
 
-            <div>
-                <label class="text-xs text-gray-400">樓層</label>
-                <input id="swal-floor" class="swal2-input" placeholder="例如：3F">
+                <div class="nw-field">
+                    <label class="nw-label" for="swal-ip">區網網段 <span class="req">*</span></label>
+                    <input id="swal-ip" class="nw-input mono" placeholder="例如：172.25.10.1" autocomplete="off">
+                    <span class="nw-hint">格式為 172.x.x.1</span>
+                </div>
+
+                <div class="nw-section">
+                    設備數量
+                    <span id="nw-total" class="nw-total">0 / 254</span>
+                </div>
+                <div class="nw-row three">
+                    <div class="nw-field">
+                        <label class="nw-label" for="swal-eap"><span class="nw-dot eap"></span>EAP</label>
+                        <input id="swal-eap" class="nw-input num" type="number" min="0" value="0">
+                    </div>
+                    <div class="nw-field">
+                        <label class="nw-label" for="swal-eqp"><span class="nw-dot eqp"></span>EQP</label>
+                        <input id="swal-eqp" class="nw-input num" type="number" min="0" value="0">
+                    </div>
+                    <div class="nw-field">
+                        <label class="nw-label" for="swal-switch"><span class="nw-dot sw"></span>Switch</label>
+                        <input id="swal-switch" class="nw-input num" type="number" min="0" value="0">
+                    </div>
+                </div>
             </div>
-
-            <div>
-                <label class="text-xs text-gray-400">區網網段</label>
-                <input id="swal-ip" class="swal2-input" placeholder="例如：172.25.10.1">
-            </div>
-
-            <!-- ⭐ 三個輸入框（你要的） -->
-            <div>
-                <label class="text-xs text-blue-400">EAP 數量</label>
-                <input id="swal-eap" type="number" min="0" value="0" class="swal2-input">
-            </div>
-
-            <div>
-                <label class="text-xs text-green-400">EQP 數量</label>
-                <input id="swal-eqp" type="number" min="0" value="0" class="swal2-input">
-            </div>
-
-            <div>
-                <label class="text-xs text-purple-400">Switch 數量</label>
-                <input id="swal-switch" type="number" min="0" value="0" class="swal2-input">
-            </div>
-
-        </div>
         `,
-        confirmButtonText: '確認',
+        confirmButtonText: '<i class="fa-solid fa-plus"></i>確認新增',
         cancelButtonText: '取消',
         showCancelButton: true,
+        reverseButtons: true,
+        buttonsStyling: false,
         focusConfirm: false,
+        customClass: {
+            container: 'nw-backdrop',
+            popup: 'nw-popup',
+            htmlContainer: 'nw-html',
+            actions: 'nw-actions',
+            confirmButton: 'nw-btn nw-confirm',
+            cancelButton: 'nw-btn nw-cancel'
+        },
+
+        didOpen: (popup) => {
+            document.getElementById('swal-site').focus()
+
+            // ⭐ 即時顯示已分配數量
+            const totalEl = document.getElementById('nw-total')
+            const ids = ['swal-eap', 'swal-eqp', 'swal-switch']
+            const updateTotal = () => {
+                const total = ids.reduce((s, id) => s + (parseInt(document.getElementById(id).value) || 0), 0)
+                totalEl.textContent = `${total} / 254`
+                totalEl.className = 'nw-total' + (total === 254 ? ' ok' : total > 254 ? ' over' : '')
+            }
+            ids.forEach(id => {
+                const el = document.getElementById(id)
+                el.addEventListener('input', updateTotal)
+                el.addEventListener('focus', () => el.select())
+            })
+
+            // ⭐ Enter 直接送出（中文輸入法選字時不觸發）
+            popup.addEventListener('keydown', e => {
+                if (e.key === 'Enter' && !e.isComposing) {
+                    e.preventDefault()
+                    Swal.clickConfirm()
+                }
+            })
+        },
 
         preConfirm: () => {
 
@@ -347,7 +453,7 @@ addNetwork() {
             floor = floor.toUpperCase()
 
             // 補保險（避免輸入 8 / 8f）
-            if (!floor.endsWith('F')) {
+            if (floor && !floor.endsWith('F')) {
                 floor = floor.replace(/[^0-9]/g, '') + 'F'
             }
             const ip = document.getElementById('swal-ip').value.trim()
@@ -357,8 +463,8 @@ addNetwork() {
             const switchCount = parseInt(document.getElementById('swal-switch').value) || 0
 
             // ⭐ 基本驗證
-            if (!site || !floor || !ip) {
-                Swal.showValidationMessage('請填寫基本資料')
+            if (!site || !floor || floor === 'F' || !ip) {
+                Swal.showValidationMessage('請填寫棟別、樓層與區網網段')
                 return false
             }
 
@@ -372,6 +478,16 @@ addNetwork() {
             const subnet1 = parseInt(match[1])
             const subnet2 = parseInt(match[2])
 
+            if (subnet1 > 255 || subnet2 > 255) {
+                Swal.showValidationMessage('IP 每段數字需介於 0～255')
+                return false
+            }
+
+            if ([eapCount, eqpCount, switchCount].some(n => n < 0)) {
+                Swal.showValidationMessage('設備數量不可為負數')
+                return false
+            }
+
             // ⭐ 總數驗證
             const total = eapCount + eqpCount + switchCount
             const loss = 254 - total
@@ -382,7 +498,11 @@ addNetwork() {
             }
 
             if (total !== 254) {
-                Swal.showValidationMessage(`總數必須為 254，目前為 ${total}，還有${loss}可以用`)
+                Swal.showValidationMessage(
+                    loss > 0
+                        ? `總數必須為 254，目前為 ${total}，還有 ${loss} 可以用`
+                        : `總數必須為 254，目前為 ${total}，超出 ${-loss}`
+                )
                 return false
             }
 
@@ -607,6 +727,8 @@ onGridKey(e) {
     // 編輯中交給 input 自己處理
     if (this.editing) return
     if (!this.sel) return
+    // ⭐ 有 SweetAlert 視窗開著時不處理表格鍵盤
+    if (Swal.isVisible()) return
     const t = e.target
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return
 

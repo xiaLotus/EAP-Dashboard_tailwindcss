@@ -1,0 +1,170 @@
+{
+  "updated_at": "2026-01-12T08:19:33.026568",
+  "records": [
+    {
+      "site": "F1",
+      "floor": "All",
+      "station": "All",
+      "date": "2026-01-10",
+      "time": "20:00",
+      "status": "Done",
+      "describe": "K21 製程設備\n - 開機率(All):86%\n - K21-2900 開機率:100%% (9/9)",
+      "action": "更新製程設備開機狀況",
+      "_originalIndex": 0
+    },
+    {
+      "site": "F3",
+      "floor": "All",
+      "station": "All",
+      "date": "2026-01-10",
+      "time": "20:00",
+      "status": "Done",
+      "describe": "K22 製程設備\n - 開機率(All): 53%\n - K22-2900 開機率:70.5% (12/17)",
+      "action": "更新製程設備開機狀況",
+      "_originalIndex": 1
+    },
+    {
+      "site": "F3",
+      "floor": "All",
+      "station": "All",
+      "date": "2026-01-10",
+      "time": "20:00",
+      "status": "Done",
+      "describe": "K11 製程設備\n - 開機率(All): 44%\n - K11-2900 開機率:4.1% (2/49)",
+      "action": "更新製程設備開機狀況",
+      "_originalIndex": 2
+    },
+    {
+      "site": "K11",
+      "floor": "All",
+      "station": "All",
+      "date": "2026-01-10",
+      "time": "20:00",
+      "status": "Done",
+      "describe": "網路不通",
+      "action": "22:30 恢復",
+      "_originalIndex": 3
+    },
+    {
+      "site": "K22",
+      "floor": "8F",
+      "station": "3380",
+      "date": "2026-01-10",
+      "time": "23:00",
+      "status": "Done",
+      "describe": "自動化機構無法復電",
+      "action": "等待維修\n11:30 PC已開啟,但PLC連線失敗\n11:50 開啟自動化",
+      "_originalIndex": 4
+    },
+    {
+      "site": "K11",
+      "floor": "8F",
+      "station": "3260",
+      "date": "2026-01-11",
+      "time": "00:18",
+      "status": "Done",
+      "describe": "WIP-A Z軸 驅動器電池異常",
+      "action": "待更換電池\n1/11 3:30 啟動\n1/11 4:00 關閉單手臂\n1/11 16:00 恢復",
+      "_originalIndex": 5
+    },
+    {
+      "site": "K11",
+      "floor": "5F",
+      "station": "3400",
+      "date": "2026-01-11",
+      "time": "00:26",
+      "status": "Done",
+      "describe": "M19 人機介面損壞,無法顯示,可以遠端處理,不影響作業",
+      "action": "待更換螢幕",
+      "_originalIndex": 6
+    },
+    {
+      "site": "K11",
+      "floor": "5F",
+      "station": "Dry room",
+      "date": "2026-01-11",
+      "time": "00:35",
+      "status": "Done",
+      "describe": "手臂Z軸驅動器異常",
+      "action": "線路鬆脫,造成原點遺失,需重新設定\n1/11 1:00 復原",
+      "_originalIndex": 7
+    },
+    {
+      "site": "K21",
+      "floor": "9F",
+      "station": "4800",
+      "date": "2026-01-11",
+      "time": "01:34",
+      "status": "Done",
+      "describe": "EAP PC故障",
+      "action": "待換備機\n1/11 2:10 更換備機\n1/11 7:30 程式過帳出現Error:無效的 URI: URI 是空的，重新Rollout後 9:32恢復過帳",
+      "_originalIndex": 8
+    },
+    {
+      "site": "K11",
+      "floor": "8F",
+      "station": "4507",
+      "date": "2026-01-11",
+      "time": "03:29",
+      "status": "Done",
+      "describe": "WIP與PLC無法連線",
+      "action": "查修中\n1/11 6:30 已恢復連線, 原點Sensor損壞更換中\n1/11 7:00 更換Sensor後恢復",
+      "_originalIndex": 9
+    },
+    {
+      "site": "K11",
+      "floor": "8F",
+      "station": "3910",
+      "date": "2026-01-11",
+      "time": "03:30",
+      "status": "Done",
+      "describe": "WIP-C 手臂無法復歸",
+      "action": "1/11 4:00 原點Sensor損壞, 更換後恢復",
+      "_originalIndex": 10
+    },
+    {
+      "site": "K11",
+      "floor": "8F",
+      "station": "4110",
+      "date": "2026-01-11",
+      "time": "03:31",
+      "status": "Done",
+      "describe": "A區移載車無法復歸",
+      "action": "1/11 4:20 卡盤感應異常",
+      "_originalIndex": 11
+    },
+    {
+      "site": "K11",
+      "floor": "8F",
+      "station": "3910",
+      "date": "2026-01-11",
+      "time": "06:47",
+      "status": "No Parts",
+      "describe": "814-ULD PLC模組損壞, 無備品",
+      "action": "待備品",
+      "_originalIndex": 12
+    },
+    {
+      "site": "K11",
+      "floor": "All",
+      "station": "All",
+      "date": "2026-01-10",
+      "time": "23:00",
+      "status": "Done",
+      "describe": "OA 網段斷斷續續 ",
+      "action": "K11-4/5/6/8F, IT處理後恢復 ",
+      "_originalIndex": 13
+    },
+    {
+      "site": "K11/21/25",
+      "floor": "All",
+      "station": "3910",
+      "date": "2026-01-11",
+      "time": "12:00",
+      "status": "Done",
+      "describe": "無法下載MI",
+      "action": "調查後僅XP系統無法取得→ IT重啟Server後恢復",
+      "_originalIndex": 14
+    }
+  ]
+}

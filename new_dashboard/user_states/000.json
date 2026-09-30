@@ -1,0 +1,17 @@
+{
+  "expandedSites": {
+    "K11": true,
+    "K25": true
+  },
+  "expandedFloors": {
+    "K11_4F": true,
+    "K25_8F": true
+  },
+  "currentSite": "K25",
+  "currentFloor": "8F",
+  "currentLabel": "區網(176)",
+  "selectedCategories": [],
+  "maintenanceFilter": false,
+  "statusFilter": "all",
+  "page": 0
+}

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設備監控系統 - 主頁</title>
+
+    <!-- Vue 3 -->
+    <script src="../static/js/vue.global.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="../static/js/tailwindcss.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="../static/js/lucide.js"></script>
+
+    <style>
+        [v-cloak] { display: none; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden; /* 🔒 完全禁止滾動 */
+        }
+
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .icon-wrapper {
+            transition: all 0.3s ease;
+        }
+
+        .card-hover:hover .icon-wrapper {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 h-screen overflow-hidden">
+<div id="app" v-cloak class="flex flex-col h-full">
+
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg shrink-0">
+        <div class="container mx-auto px-6 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-lg">
+                        <i data-lucide="monitor" class="text-purple-600" style="width:28px;height:28px;"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold">設備監控系統</h1>
+                        <p class="text-purple-100 mt-1">Equipment Monitoring System</p>
+                    </div>
+                </div>
+                <!-- <div class="text-right">
+                    <div class="text-sm text-purple-100">當前時間</div>
+                    <div class="text-xl font-bold">{{ currentTime }}</div>
+                </div> -->
+
+                <!-- 🔙 返回按鈕（新增） -->
+                <button
+                    @click="goBack"
+                    class="
+                        inline-flex items-center gap-2
+                        h-9 px-3
+                        rounded-lg
+                        border border-white/40
+                        bg-white/20
+                        text-white text-sm font-semibold
+                        backdrop-blur
+                        transition-all duration-200
+                        hover:bg-white/30 hover:border-white/60
+                        active:scale-95
+                        focus:outline-none focus:ring-2 focus:ring-white/60
+                    "
+                >
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    <span>返回</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="flex-1 container mx-auto px-6 py-6 overflow-hidden">
+
+        <!-- Welcome -->
+        <div class="text-center mb-6 animate-fade-in-up">
+            <h2 class="text-3xl font-bold text-gray-900 mb-2">歡迎使用設備監控系統</h2>
+            <p class="text-gray-600 text-lg">請選擇您要查看的功能</p>
+        </div>
+
+        <!-- Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto">
+
+            <!-- Card 1 -->
+            <div class="card-hover bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-blue-100 animate-fade-in-up">
+                <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white">
+                    <div class="icon-wrapper w-20 h-20 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center mb-4 mx-auto">
+                        <i data-lucide="line-chart" style="width:48px;height:48px;"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-center">每小時妥善率</h3>
+                    <p class="text-center text-blue-100 mt-2">Hourly Availability Rate</p>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3 mb-4">
+                        <div class="flex items-center gap-3 text-gray-700"><i data-lucide="check-circle" class="text-green-500"></i>即時圖表監控</div>
+                        <div class="flex items-center gap-3 text-gray-700"><i data-lucide="activity" class="text-green-500"></i>K11/K22 趨勢分析</div>
+                        <div class="flex items-center gap-3 text-gray-700"><i data-lucide="refresh-cw" class="text-green-500"></i>自動刷新數據</div>
+                    </div>
+                    <button @click="navigateTo('hourly_rate_hardware.html')"
+                        class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                        <i data-lucide="arrow-right"></i>進入圖表頁面
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="card-hover bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-orange-100 animate-fade-in-up">
+                <div class="bg-gradient-to-br from-orange-500 to-orange-600 p-6 text-white">
+                    <div class="icon-wrapper w-20 h-20 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center mb-4 mx-auto">
+                        <i data-lucide="alert-triangle" style="width:48px;height:48px;"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-center">K11/K22 緊急表單</h3>
+                    <p class="text-center text-orange-100 mt-2">Emergency Form</p>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3 mb-4">
+                        <div class="flex items-center gap-3 text-gray-700"><i data-lucide="file-text" class="text-orange-500"></i>K11 設備管理</div>
+                        <div class="flex items-center gap-3 text-gray-700"><i data-lucide="clipboard-list" class="text-orange-500"></i>K22 設備管理</div>
+                        <div class="flex items-center gap-3 text-gray-700"><i data-lucide="bell" class="text-orange-500"></i>緊急狀況處理</div>
+                    </div>
+                    <button @click="navigateTo('K11_K22緊急表單.html')"
+                        class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                        <i data-lucide="arrow-right"></i>進入表單頁面
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="card-hover bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-red-100 animate-fade-in-up">
+                <div class="bg-gradient-to-br from-red-500 to-red-600 p-6 text-white">
+                    <div class="icon-wrapper w-20 h-20 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center mb-4 mx-auto">
+                        <i data-lucide="database" style="width:48px;height:48px;"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-center">異常總表</h3>
+                    <p class="text-center text-red-100 mt-2">Abnormal Records</p>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3 mb-4">
+                        <div class="flex items-center gap-3 text-gray-700"><i data-lucide="list" class="text-red-500"></i>異常記錄查詢</div>
+                        <div class="flex items-center gap-3 text-gray-700"><i data-lucide="edit" class="text-red-500"></i>記錄編輯管理</div>
+                        <div class="flex items-center gap-3 text-gray-700"><i data-lucide="trash-2" class="text-red-500"></i>批量刪除功能</div>
+                    </div>
+                    <button @click="navigateTo('Abnormalities_Summary.html')"
+                        class="w-full bg-gradient-to-r from-red-500 to-red-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                        <i data-lucide="arrow-right"></i>進入總表頁面
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Info -->
+        <div class="mt-6 text-center">
+            <div class="inline-flex items-center gap-2 bg-white px-5 py-2 rounded-full shadow-md">
+                <i data-lucide="info" class="text-blue-500"></i>
+                <span class="text-gray-700">提示：點擊任一卡片進入對應功能頁面</span>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="shrink-0 py-3 bg-gray-800 text-white">
+        <div class="container mx-auto px-6 text-center">
+            <div class="flex items-center justify-center gap-2">
+                <i data-lucide="shield-check"></i>
+                <p class="text-base font-semibold">設備監控系統 v1.0</p>
+            </div>
+            <p class="text-gray-400 text-sm">© 2026 All Rights Reserved</p>
+        </div>
+    </footer>
+
+</div>
+
+<script>
+const app = Vue.createApp({
+    data() {
+        return { currentTime: '' };
+    },
+    methods: {
+        updateTime() {
+            const now = new Date();
+            this.currentTime = now.toLocaleString('zh-TW', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+        },
+        navigateTo(page) {
+            window.location.href = page;
+        },
+        goBack(){
+            window.location.href = "lab.html";
+        }
+    },
+    mounted() {
+        this.updateTime();
+        setInterval(this.updateTime, 1000);
+        lucide.createIcons();
+    }
+});
+app.mount('#app');
+</script>
+
+</body>
+</html>
