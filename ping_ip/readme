@@ -1,0 +1,151 @@
+# EAP_Ping.py — 通用網段 Ping 掃描器（設計說明 v1）
+
+> 一支程式、多份 config。K11_3F / 其他 / 之後任何樓層都用同一支 `EAP_Ping.py`，
+> 只換 `config.ini`。本文件說明這支程式**會讀什麼、會寫什麼**，程式碼待確認後再出。
+
+---
+
+## 1. 執行流程總覽
+
+```
+啟動
+ ├─ 讀 config.ini
+ ├─ 對每個 source CSV：
+ │    ├─ ① 備份 CSV（backup_yyyymmddHHMMSS.csv，超過 backup_keep 份刪最舊）
+ │    ├─ ② 第一輪：ping 該網段全部 IP（async，快→慢多段 timeout）
+ │    ├─ ③ 寫回 alive_or_dead 到原 CSV
+ │    └─ ④ 挑出「dead 且 Category ∈ {EAP, Switch} 且 是否派報 = Y」→ 丟進 Buffer 候選
+ ├─ 第二輪：Device_Name 補 ping（只針對 Buffer 候選）
+ │    ├─ Device_Name 符合正則 \d{8}-W\d{2,3} → 用主機名再 ping 一次
+ │    │    ├─ 通 → 從候選移除，並回寫原 CSV 為 alive
+ │    │    └─ 不通 → 留在候選
+ │    └─ Device_Name 不符正則 / 為空（Switch 幾乎都是）→ 跳過，直接留在候選
+ ├─ 第三輪：再用 IP ping 一次 Buffer 候選（timeout 更長）
+ │    ├─ 轉 alive → 從候選移除，並回寫原 CSV 為 alive
+ │    └─ 仍 dead → 查該 IP 在最新 backup_keep 份備份中是否曾有 alive 紀錄
+ │         ├─ 有 → 留在 Buffer
+ │         └─ 無 → 從 Buffer 移除（長期死的 IP 不派報）
+ ├─ 寫 Buffer 檔（先清掉本次來源檔的舊紀錄，再寫入新結果）
+ └─ 結束，寫 log
+```
+
+---
+
+## 2. 會讀取的檔案
+
+| 檔案 | 來源 | 用途 |
+|---|---|---|
+| `config.ini` | 與 .py 同資料夾 | 所有路徑與參數（見 §4） |
+| `source_dirs` 各資料夾**第一層**的 `*.csv`（不含子資料夾，所以 `backup\` 不會被掃到）+ `source_files` 額外指定的單檔 | config | 要 ping 的設備清單。必要欄位：`Internal_IP`、`Device_Name`、`Category`、`Machine_ID`、`是否派報`、`alive_or_dead`（沒有會自動補） |
+| `backup/<csv名>/backup_yyyymmddHHMMSS.csv` | 自己產生 | 第三輪判斷「歷史是否曾 alive」用 |
+
+`Internal_IP == 0` 的分隔列會直接跳過，不 ping、不寫 Buffer。
+
+---
+
+## 3. 會寫入的檔案
+
+### 3-1. 原始來源 CSV（原地覆寫）
+- 只改一欄：`alive_or_dead`（第一輪結果；第二輪若轉 alive 會再更新成 alive）。
+- 其他欄位（含 `是否派報`）原封不動。
+- 寫檔前會先做備份（3-2）。
+
+### 3-2. 備份檔
+```
+<CSV所在資料夾>\backup\<csv檔名去副檔名>\backup_20261015193000.csv   ← 這次 ping 前的狀態
+<CSV所在資料夾>\backup\<csv檔名去副檔名>\backup_20261015183000.csv
+...
+例：\\...\source\K11\3F\backup\K11-3F 區網(27)\backup_20261015193000.csv
+```
+- 檔名 `backup_yyyymmddHHMMSS.csv`，時間 = 本次執行開始時間（同一次執行的所有 CSV 用同一個時間戳，方便對照）。
+- 每次執行：先複製原檔為新備份，再依檔名排序刪掉超過 `backup_keep` 份的最舊檔（預設保留 5 份）。
+- 第三輪「歷史是否曾 alive」= 讀這個資料夾內**最新的 `backup_keep` 份**（依檔名時間戳倒序）。
+- `backup_dir` 留空 = 跟著 CSV 所在資料夾；填路徑則全部集中到那裡。
+
+### 3-3. Buffer 暫存檔（給 5 分鐘輪詢小程式讀）
+- 路徑：config `[Buffer] buffer_file`，建議所有樓層的 config **指到同一個檔**，例如
+  `\\20220530-w03\Data\EAP_Health_level\buffer\dead_buffer.csv`
+- 多支程式同時寫 → 用 `FileLock`（同路徑 `.lock`）保護。
+- **替換規則**：寫入前先移除 `Source_File` 屬於本次處理檔名的舊列，其他樓層的列保留；所以每個 IP 在 Buffer 內最多一列，恢復 alive 的會自然消失。
+- 格式（CSV, utf-8-sig）：
+
+| 欄位 | 說明 |
+|---|---|
+| `First_Seen` | 這個 IP 第一次進 Buffer 的時間（延續舊列的值，不重算） |
+| `Last_Check` | 本次執行時間 |
+| `IP` | Internal_IP |
+| `Category` | EAP / Switch |
+| `Machine_ID` | 原 CSV 值 |
+| `Device_Name` | 原 CSV 值 |
+| `Building` | 由路徑解析（K11 / 其他 / 歲修） |
+| `Floor` | 由路徑解析（3F / 其他 / 歲修表單） |
+| `Source_File` | 來源 CSV 檔名，例如 `K11-3F 區網(27).csv` |
+| `Alive_In_Backup` | 在哪幾份備份看到 alive，例如 `20261015183000,20261015173000` |
+| `Dead_Rounds` | 連續幾次執行仍在 Buffer（延續舊列 +1） |
+
+`Dead_Rounds` / `First_Seen` 是給派報程式判斷「死多久」用的，派報邏輯本身不在這支程式裡。
+
+### 3-4. 執行 Log
+```
+<log_dir>\<log_name>_ping_log_YYYY-MM-DD.log
+```
+- loguru，每天 00:00 換檔，`retention="90 days"` 自動刪 90 天前的檔。
+- `log_name` 由 config 指定（K11_3F / Other / …），同一個 `log_dir` 可被多支程式共用而不互相覆蓋。
+- 內容：每輪掃描耗時與 alive/dead 數、進 Buffer / 出 Buffer 的 IP 清單、備份比對結果、錯誤。
+
+### 3-5. 不再寫入的東西（已從舊版移除）
+- `status_change_log.csv`
+- `error_lose_machine_{EAP,EQP,Switch}.csv`
+- `Daily_error\error_lose_ipcount_YYYYMMDD.json`
+- `alarm_store_files\{EAP,EQP,Switch}.txt`
+- `eap_loss / eqp_loss / switch_loss` 三個 CSV
+
+### 3-6. Floor.json（保留）
+- 路徑：config `floor_json`。跑完後把本次處理的樓層 key 設為 `"V"`。
+- key 來源：config `floor_key` 有值就用它（例：`other_EAP`）；沒有就從路徑 `\K11\3F\` 解析成 `K11-3F`。
+- 它的用途：所有樓層的 ping 程式各自跑完後在這裡打勾，給後面彙整/看板程式判斷「這一輪全部樓層都掃完了沒」；彙整程式讀完通常會再把它清回空白。這支程式只負責打 V，不負責清。
+
+---
+
+## 4. config.ini 格式（通用）
+
+```ini
+[Paths]
+log_dir      = \\20220530-w03\Data\EAP_Health_level\error_data\log
+log_name     = K11_3F
+source_dirs  = \\20220530-w03\Data\EAP_Health_level\source\K11\3F   ; 只填資料夾，自動掃第一層 *.csv
+source_files =                   ; 額外單檔，可留空（其他樓層用來指定 suixiu.csv）
+backup_dir   =                   ; 留空 = <CSV所在資料夾>\backup
+floor_json   = \\20220530-w03\Data\EAP_Health_level\source\Floor.json
+floor_key    =                   ; 留空=從路徑解析；其他樓層填 other_EAP
+
+[Buffer]
+buffer_file  = \\20220530-w03\Data\EAP_Health_level\buffer\dead_buffer.csv
+
+[Scan]
+round1_timeouts  = 0.5, 2        ; 第一輪多段 timeout（秒），依序對仍 dead 的再試
+round2_timeout   = 3             ; 第二輪 Device_Name ping timeout（秒）
+round3_timeouts  = 3, 5          ; 第三輪 IP 再 ping timeout（秒）
+round3_delay_sec = 1             ; 第二輪跑完後，等幾秒再跑第三輪
+device_name_regex = \d{8}-W\d{2,3}   ; 第二輪只對符合此正則的 Device_Name 做主機名 ping
+max_concurrent   = 200
+backup_keep      = 5             ; 保留幾份備份 = 第三輪往回查幾份
+log_retention_days = 90
+```
+
+「其他」樓層的 config 只差 `log_name = Other`、`source_dirs = ...\source\其他`、`source_files = ...\source\suixiu.csv`、`floor_key = other_EAP`，程式碼完全相同。
+
+---
+
+## 5. 已確認的決定（2026-10-15）
+
+| # | 題目 | 決定 |
+|---|---|---|
+| 1 | Buffer 共用？ | 共用一個 `dead_buffer.csv`，只收 Category = EAP / Switch |
+| 2 | Buffer 格式 | CSV |
+| 3 | EAP / Switch 判定 | 看 `Category` 欄 |
+| 4 | EAP 需 Machine_ID？ | 不需要，只看類別 |
+| 5 | 無備份檔時仍 dead | 留在 Buffer，`Alive_In_Backup = NO_BACKUP` |
+| 6 | 第三輪延遲 | 1 秒 |
+| 7 | Floor.json 標 V | 保留 |
+| 8 | 第二輪主機名通、IP 不通 | 視為 alive，移出候選，CSV 寫 alive |
