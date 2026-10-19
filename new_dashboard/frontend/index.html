@@ -166,6 +166,33 @@ input,select,textarea{font-family:inherit;color:inherit}
 .filter-count{margin-left:auto;font-size:12px;color:var(--text-3)}
 .filter-count b{color:var(--text-2);font-family:var(--mono);font-weight:500}
 
+/* ===== 多格統一更改列（選取 2 格以上時出現在篩選列左側） ===== */
+.bulk-bar{
+    display:flex;align-items:center;gap:8px;height:30px;padding:0 6px 0 10px;border-radius:15px;
+    background:var(--blue-soft);border:1px solid rgba(76,141,255,.35);font-size:12.5px;color:var(--text);
+    animation:bulkIn .18s ease-out both;
+}
+@keyframes bulkIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+.bulk-bar .bk-count{font-family:var(--mono);font-weight:600;color:var(--blue)}
+.bulk-bar .bk-col{font-family:var(--mono);color:var(--text-2)}
+.bulk-bar .bk-arrow{color:var(--text-3);font-size:11px}
+.bulk-bar select,.bulk-bar input{
+    height:24px;min-width:110px;padding:0 8px;border-radius:6px;border:1px solid var(--line);
+    background:var(--bg);color:var(--text);font-size:12.5px;outline:0;
+}
+.bulk-bar select:focus,.bulk-bar input:focus{border-color:var(--blue)}
+.bulk-bar select option{background:var(--panel)}
+.bk-btn{height:24px;padding:0 10px;border-radius:12px;font-size:12px;font-weight:600;border:1px solid transparent;transition:background .15s,color .15s}
+.bk-btn i{font-size:11px;margin-right:4px}
+.bk-apply{background:var(--blue);color:#fff}
+.bk-apply:hover{background:#3f7ff2}
+.bk-clear{background:transparent;border-color:var(--line);color:var(--text-2)}
+.bk-clear:hover{color:var(--red);border-color:rgba(240,97,107,.5);background:var(--red-soft)}
+.bk-cancel{width:24px;padding:0;color:var(--text-3);border-radius:50%}
+.bk-cancel:hover{color:var(--text);background:var(--panel-2)}
+.bk-btn:disabled{opacity:.5;cursor:default}
+.bulk-bar .bk-prog{font-family:var(--mono);font-size:11.5px;color:var(--text-2)}
+
 .content{flex:1;overflow:auto;padding:16px 24px}
 
 /* ===== Excel 樣式表格 ===== */
@@ -185,8 +212,15 @@ input,select,textarea{font-family:inherit;color:inherit}
 .sheet tr.zero td{background:#fff59d!important}
 .sheet tr.zero td.rownum{background:#ffe97a!important}
 .sheet td.locked{cursor:default;color:#6b7280}
+/* 多格範圍（淡藍底）、錨點格（藍框） */
+.sheet td.rsel,.sheet tbody tr:hover td.rsel{background:#d3e3fd}
 .sheet td.sel{outline:2px solid #1a73e8;outline-offset:-2px;background:#eaf1fd}
+.sheet td.sel.rsel{background:#c6dafc}
 .sheet tr.zero td.sel{background:#ffe97a!important}
+.sheet tr.zero td.rsel{background:#ffe97a!important}
+.sheet th.clickable{cursor:pointer}
+.sheet th.clickable:hover{background:#e3e6ea}
+.sheet th.col-sel{background:#d3e3fd;color:#1a73e8}
 .sheet td.editing{padding:0;background:#fff!important;outline:2px solid #1a73e8;outline-offset:-2px}
 .sheet td.editing input,.sheet td.editing select{
     width:100%;height:26px;border:0;outline:0;padding:0 8px;background:#fff;color:#1f2328;
@@ -454,9 +488,33 @@ input,select,textarea{font-family:inherit;color:inherit}
         </div>
 
         <div class="filter-bar">
-            <button @click="toggleCategory('EAP')"    :class="['fbtn', selectedCategories.includes('EAP')    ? 'f-cat' : '']">EAP</button>
-            <button @click="toggleCategory('EQP')"    :class="['fbtn', selectedCategories.includes('EQP')    ? 'f-cat' : '']">EQP</button>
-            <button @click="toggleCategory('Switch')" :class="['fbtn', selectedCategories.includes('Switch') ? 'f-cat' : '']">Switch</button>
+            <!-- ⭐ 多格統一更改：選取同一欄 2 格以上時出現 -->
+            <template v-if="showBulk">
+                <div class="bulk-bar">
+                    <span>已選 <span class="bk-count">{{ bulkItems.length }}</span> 筆</span>
+                    <span class="bk-col">{{ selCol }}</span>
+                    <span class="bk-arrow"><i class="fa-solid fa-arrow-right"></i></span>
+                    <select v-if="bulkOptions" v-model="bulkValue" :disabled="bulkBusy">
+                        <option v-for="o in bulkOptions" :key="o.v" :value="o.v">{{ o.v === '' ? '（空值）' : o.t }}</option>
+                    </select>
+                    <input v-else v-model="bulkValue" :disabled="bulkBusy" placeholder="輸入要統一填入的值"
+                           @keydown.enter.prevent="applyBulk()">
+                    <button class="bk-btn bk-apply" :disabled="bulkBusy" @click="applyBulk()" title="套用到選取的格子">
+                        <i class="fa-solid fa-check"></i>統一更改
+                    </button>
+                    <button class="bk-btn bk-clear" :disabled="bulkBusy" @click="bulkClear()" title="把選取的格子清成空值">
+                        <i class="fa-solid fa-eraser"></i>清空
+                    </button>
+                    <span v-if="bulkBusy" class="bk-prog">{{ bulkProgress }} / {{ bulkItems.length }}</span>
+                    <button class="bk-btn bk-cancel" :disabled="bulkBusy" @click="clearSel()" title="取消選取">✕</button>
+                </div>
+                <span class="sep"></span>
+            </template>
+
+            <button @click="toggleCategory('EAP')"       :class="['fbtn', selectedCategories.includes('EAP')       ? 'f-cat' : '']">EAP</button>
+            <button @click="toggleCategory('EQP')"       :class="['fbtn', selectedCategories.includes('EQP')       ? 'f-cat' : '']">EQP</button>
+            <button @click="toggleCategory('Switch')"    :class="['fbtn', selectedCategories.includes('Switch')    ? 'f-cat' : '']">Switch</button>
+            <button @click="toggleCategory('DashBoard')" :class="['fbtn', selectedCategories.includes('DashBoard') ? 'f-cat' : '']">DashBoard</button>
             <span class="sep"></span>
             <button @click="toggleMaintenance()" :class="['fbtn', maintenanceFilter ? 'f-maint' : '']">歲修中</button>
             <button @click="cycleStatus()"
@@ -486,7 +544,11 @@ input,select,textarea{font-family:inherit;color:inherit}
                     <thead>
                         <tr>
                             <th class="rownum">#</th>
-                            <th v-for="col in columns" :key="col">{{ col }}</th>
+                            <!-- 點表頭 → 選取整欄（可編輯欄位才行） -->
+                            <th v-for="(col, ci) in columns" :key="col"
+                                :class="{ clickable: isEditable(col), 'col-sel': selCount > 1 && sel && sel.c === ci }"
+                                :title="isEditable(col) ? '點一下選取整欄' : ''"
+                                @click="isEditable(col) && selectColumn(ci)">{{ col }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -498,12 +560,21 @@ input,select,textarea{font-family:inherit;color:inherit}
                             <!-- 0.0.0.x：整列黃底、不顯示內容、不可編輯 -->
                             <template v-if="isZeroIp(item)">
                                 <td v-for="(col, ci) in columns" :key="col" class="locked"
-                                    :class="{ sel: isSel(i, ci) }" @click="selectCell(i, ci)"></td>
+                                    :class="{ sel: isAnchor(i, ci), rsel: isSel(i, ci) }"
+                                    @mousedown="onCellDown($event, i, ci)"
+                                    @mouseenter="onCellEnter(i, ci)"></td>
                             </template>
 
                             <td v-else v-for="(col, ci) in columns" :key="col"
-                                :class="[cellClass(col, item[col]), { sel: isSel(i, ci), editing: isEditing(item, col), locked: !isEditable(col) }]"
-                                @click="selectCell(i, ci)"
+                                :class="[cellClass(col, item[col]), {
+                                    sel: isAnchor(i, ci),
+                                    rsel: isSel(i, ci),
+                                    'rsel-end': selEnd && selEnd.r === i && selEnd.c === ci,
+                                    editing: isEditing(item, col),
+                                    locked: !isEditable(col)
+                                }]"
+                                @mousedown="onCellDown($event, i, ci)"
+                                @mouseenter="onCellEnter(i, ci)"
                                 @dblclick="startEdit(item, col)">
 
                                 <template v-if="isEditing(item, col)">

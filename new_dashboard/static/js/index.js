@@ -33,7 +33,7 @@ Vue.createApp({
                 currentSite: '',
                 currentFloor: '',
                 currentLabel: '',
-                selectedCategories: [],   // ⭐ EAP / EQP / Switch
+                selectedCategories: [],   // ⭐ EAP / EQP / Switch / DashBoard
                 maintenanceFilter: false, // ⭐ 歲修
                 statusFilter: 'all',      // ⭐ alive / dead
                 page: 0                   // ⭐ 第幾頁
@@ -49,7 +49,13 @@ Vue.createApp({
             editing: null,      // { ip, col }
             editValue: '',
             editSelectAll: true, // 進入編輯時是否全選（用鍵盤打字進入時不全選）
-            sel: null,           // 目前選取的儲存格 { r, c }（Excel 游標）
+            sel: null,           // 目前選取的儲存格（錨點） { r, c }（Excel 游標）
+            // ⭐ 多格選取（同一欄往下/往上拖曳或 Shift+方向鍵）
+            selEnd: null,        // 範圍結尾 { r, c }；null = 只選一格
+            dragging: false,     // 滑鼠拖曳中
+            bulkValue: '',       // 統一更改的值
+            bulkBusy: false,     // 批次更新中
+            bulkProgress: 0,     // 批次更新進度（已完成筆數）
         }
     },
 
@@ -179,6 +185,48 @@ Vue.createApp({
 
         totalPages() {
             return Math.max(1, Math.ceil(this.filteredDevices.length / this.perPage));
+        },
+
+        // ===================== 多格選取 =====================
+        // 目前選取範圍（同一欄，r1 ≤ r2）
+        selRange() {
+            if (!this.sel) return null
+            const end = this.selEnd || this.sel
+            return {
+                r1: Math.min(this.sel.r, end.r),
+                r2: Math.max(this.sel.r, end.r),
+                c: this.sel.c
+            }
+        },
+        selCount() {
+            const rg = this.selRange
+            return rg ? rg.r2 - rg.r1 + 1 : 0
+        },
+        selCol() {
+            return this.sel ? this.columns[this.sel.c] : ''
+        },
+        // 範圍內可被更改的資料（排除 0.0.0.x 列）
+        bulkItems() {
+            const rg = this.selRange
+            if (!rg) return []
+            return this.filteredDevices
+                .slice(rg.r1, rg.r2 + 1)
+                .filter(it => !this.isZeroIp(it))
+        },
+        bulkOptions() {
+            return this.selectOptions(this.selCol)
+        },
+        // 選了 2 格以上、而且該欄可編輯 → 顯示統一更改列
+        showBulk() {
+            return this.selCount > 1 && this.isEditable(this.selCol)
+        }
+    },
+
+    watch: {
+        // 換到別欄時，重設統一更改的預設值
+        selCol(col) {
+            const opts = this.selectOptions(col)
+            this.bulkValue = opts ? opts[0].v : ''
         }
     },
 
@@ -199,6 +247,7 @@ Vue.createApp({
             const i = this.selectedCategories.indexOf(cat);
             i > -1 ? this.selectedCategories.splice(i, 1) : this.selectedCategories.push(cat);
             this.page = 0;
+            this.clearSel()
 
             this.saveState()
         },
@@ -206,6 +255,7 @@ Vue.createApp({
         toggleMaintenance() {
             this.maintenanceFilter = !this.maintenanceFilter;
             this.page = 0;
+            this.clearSel()
 
             this.saveState()
         },
@@ -216,6 +266,7 @@ Vue.createApp({
                 this.statusFilter === 'alive' ? 'dead' : 'all';
 
             this.page = 0;
+            this.clearSel()
             this.saveState()
         },
 
@@ -236,6 +287,8 @@ Vue.createApp({
         },
 
         selectDB(site, floor, label) {
+            this.clearSel()
+
             // ⭐ 點擊已選取的 DB → 取消選取
             if (    this.currentSite === site &&
                     this.currentFloor === floor &&
@@ -317,7 +370,7 @@ Vue.createApp({
             window.location.href = "log.html"
         },
 
-        // ⭐ 歲修頁面（檔名請依實際頁面調整）
+        // ⭐ 歲修頁面
         goToMaintenancePage() {
             localStorage.setItem('isLogin', 'true')
             localStorage.setItem('username', this.username)
@@ -642,6 +695,7 @@ async searchAllDevices() {
 
     this.isSearching = true
     this.isLoading = true
+    this.clearSel()
 
     try {
 
@@ -672,26 +726,78 @@ async searchAllDevices() {
 },
 clearSearch() {
     this.searchKeyword = ''
+    this.clearSel()
     this.fetchData()   // 回原本 DB
 },
 
 // ===================== Excel 式選取 / 鍵盤導覽 =====================
+// 是否在選取範圍內（同一欄、r1~r2 之間）
 isSel(r, c) {
-    return this.sel && this.sel.r === r && this.sel.c === c
+    const rg = this.selRange
+    return !!rg && c === rg.c && r >= rg.r1 && r <= rg.r2
 },
 
-selectCell(r, c) {
-    this.sel = { r, c }
+// 是否為錨點格（鍵盤操作、單格編輯的對象）
+isAnchor(r, c) {
+    return !!this.sel && this.sel.r === r && this.sel.c === c
+},
+
+clearSel() {
+    this.sel = null
+    this.selEnd = null
+    this.dragging = false
+},
+
+// extend = true：以目前錨點為起點，延伸到 (r, 同一欄)
+selectCell(r, c, extend = false) {
+    if (extend && this.sel) {
+        this.selEnd = { r, c: this.sel.c }
+    } else {
+        this.sel = { r, c }
+        this.selEnd = null
+    }
     this.$nextTick(() => {
-        const el = document.querySelector('.sheet td.sel')
+        const el = document.querySelector(extend ? '.sheet td.rsel-end' : '.sheet td.sel')
         if (el) el.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     })
 },
 
-moveSel(dr, dc) {
+// 滑鼠按下：開始選取 / 拖曳；Shift+點擊 = 延伸範圍
+onCellDown(e, r, c) {
+    if (e.button !== 0) return
+    // 點在編輯中的 input / select 上 → 不動選取
+    const tag = e.target && e.target.tagName
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'OPTION') return
+    if (e.shiftKey && this.sel) {
+        this.selectCell(r, c, true)
+        return
+    }
+    this.selectCell(r, c)
+    this.dragging = true
+},
+
+// 拖曳經過其他列：延伸範圍（固定在錨點那一欄）
+onCellEnter(r, c) {
+    if (!this.dragging || !this.sel) return
+    this.selEnd = (r === this.sel.r) ? null : { r, c: this.sel.c }
+},
+
+onMouseUp() {
+    this.dragging = false
+},
+
+moveSel(dr, dc, extend = false) {
     if (!this.sel) return
     const rows = this.filteredDevices.length
     const cols = this.columns.length
+    if (extend) {
+        // Shift+上下：延伸範圍；左右不延伸（只能同一欄）
+        if (dr === 0) return
+        const base = this.selEnd || this.sel
+        const r = Math.min(rows - 1, Math.max(0, base.r + dr))
+        this.selectCell(r, this.sel.c, true)
+        return
+    }
     const r = Math.min(rows - 1, Math.max(0, this.sel.r + dr))
     const c = Math.min(cols - 1, Math.max(0, this.sel.c + dc))
     this.selectCell(r, c)
@@ -702,6 +808,7 @@ editSelected(initial) {
     const item = this.filteredDevices[this.sel.r]
     const col  = this.columns[this.sel.c]
     if (!item || this.isZeroIp(item) || !this.isEditable(col)) return
+    this.selEnd = null   // 編輯時收回多格選取
     this.editing = { ip: item.Internal_IP, col }
     if (initial !== undefined) {
         this.editValue = initial
@@ -714,6 +821,8 @@ editSelected(initial) {
 
 async clearSelected() {
     if (!this.sel) return
+    // 多格 → 走批次清空
+    if (this.selCount > 1) { this.bulkClear(); return }
     const item = this.filteredDevices[this.sel.r]
     const col  = this.columns[this.sel.c]
     if (!item || this.isZeroIp(item) || !this.isEditable(col)) return
@@ -727,26 +836,39 @@ onGridKey(e) {
     // 編輯中交給 input 自己處理
     if (this.editing) return
     if (!this.sel) return
-    // ⭐ 有 SweetAlert 視窗開著時不處理表格鍵盤
-    if (Swal.isVisible()) return
+    // ⭐ 有 SweetAlert 視窗開著時不處理表格鍵盤（右上角的 toast 不算）
+    if (typeof Swal !== 'undefined' && Swal.isVisible() &&
+        !Swal.getPopup()?.classList.contains('swal2-toast')) return
+    if (this.bulkBusy) return
     const t = e.target
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return
 
     switch (e.key) {
-        case 'ArrowUp':    e.preventDefault(); this.moveSel(-1, 0); return
-        case 'ArrowDown':  e.preventDefault(); this.moveSel( 1, 0); return
+        case 'ArrowUp':    e.preventDefault(); this.moveSel(-1, 0, e.shiftKey); return
+        case 'ArrowDown':  e.preventDefault(); this.moveSel( 1, 0, e.shiftKey); return
         case 'ArrowLeft':  e.preventDefault(); this.moveSel(0, -1); return
         case 'ArrowRight': e.preventDefault(); this.moveSel(0,  1); return
         case 'Tab':        e.preventDefault(); this.moveSel(0, e.shiftKey ? -1 : 1); return
         case 'Home':       e.preventDefault(); this.selectCell(this.sel.r, 0); return
         case 'End':        e.preventDefault(); this.selectCell(this.sel.r, this.columns.length - 1); return
-        case 'PageDown':   e.preventDefault(); this.moveSel(20, 0); return
-        case 'PageUp':     e.preventDefault(); this.moveSel(-20, 0); return
+        case 'PageDown':   e.preventDefault(); this.moveSel(20, 0, e.shiftKey); return
+        case 'PageUp':     e.preventDefault(); this.moveSel(-20, 0, e.shiftKey); return
         case 'Enter':
         case 'F2':         e.preventDefault(); this.editSelected(); return
         case 'Delete':
         case 'Backspace':  e.preventDefault(); this.clearSelected(); return
-        case 'Escape':     this.sel = null; return
+        case 'Escape':
+            // 第一次 Esc 收回多格選取，第二次才取消選取
+            if (this.selEnd) this.selEnd = null
+            else this.sel = null
+            return
+    }
+
+    // Ctrl+A：選取目前欄位的整欄（Excel 行為）
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault()
+        this.selectColumn(this.sel.c)
+        return
     }
 
     // 直接打字 → 進入編輯並以該字取代內容（Excel 行為）
@@ -754,6 +876,14 @@ onGridKey(e) {
         e.preventDefault()
         this.editSelected(e.key)
     }
+},
+
+// 點表頭 → 選取整欄
+selectColumn(c) {
+    const rows = this.filteredDevices.length
+    if (!rows) return
+    this.sel = { r: 0, c }
+    this.selEnd = rows > 1 ? { r: rows - 1, c } : null
 },
 
 // 編輯框內的鍵盤：Enter 往下、Tab 往右、上下鍵也會存檔並移動
@@ -783,9 +913,10 @@ isEditing(item, col) {
 },
 
 selectOptions(col) {
-    if (col === 'Category')      return [{v:'EAP',t:'EAP'},{v:'EQP',t:'EQP'},{v:'Switch',t:'Switch'}]
+    if (col === 'Category')      return [{v:'EAP',t:'EAP'},{v:'EQP',t:'EQP'},{v:'Switch',t:'Switch'},{v:'DashBoard',t:'DashBoard'}]
     if (col === '歲修')          return [{v:'',t:''},{v:'Y',t:'Y'},{v:'N',t:'N'}]
     if (col === 'alive_or_dead') return [{v:'alive',t:'alive'},{v:'dead',t:'dead'}]
+    if (col === '是否派報')      return [{v:'',t:''},{v:'Y',t:'Y'},{v:'N',t:'N'}]
     return null
 },
 
@@ -793,6 +924,7 @@ startEdit(item, col) {
     if (!this.isEditable(col) || this.isZeroIp(item)) return
     if (this.isEditing(item, col)) return
     this.sel = { r: this.filteredDevices.indexOf(item), c: this.columns.indexOf(col) }
+    this.selEnd = null
     this.editing = { ip: item.Internal_IP, col }
     this.editValue = item[col] ?? ''
     this.editSelectAll = true
@@ -801,6 +933,28 @@ startEdit(item, col) {
 cancelEdit() {
     this.editing = null
     this.editValue = ''
+},
+
+// 單格儲存（給 commitEdit 與批次更新共用）；成功回傳 true
+async saveCell(item, col, newVal) {
+    const payload = { ...item, [col]: newVal }
+    const res = await fetch(`${API_BASE}/api/update_device`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            ...payload,
+            site: this.currentSite || item.site,
+            floor: this.currentFloor || item.floor || '',
+            label: this.currentLabel || item.label,
+            username: this.username
+        })
+    })
+    const r = await res.json()
+    if (r.success) {
+        item[col] = newVal
+        return true
+    }
+    throw new Error(r.error || '儲存失敗')
 },
 
 async commitEdit(item, col) {
@@ -813,32 +967,72 @@ async commitEdit(item, col) {
     if (newVal === oldVal) return
 
     try {
-        const payload = { ...item, [col]: newVal }
-
-        const res = await fetch(`${API_BASE}/api/update_device`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                ...payload,
-                site: this.currentSite || item.site,
-                floor: this.currentFloor || item.floor || '',
-                label: this.currentLabel || item.label,
-                username: this.username
-            })
-        })
-        const r = await res.json()
-
-        if (r.success) {
-            item[col] = newVal
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success',
-                        title: `${item.Internal_IP}　${col} 已更新`, timer: 1200, showConfirmButton: false })
-        } else {
-            Swal.fire({ icon: 'error', title: '儲存失敗', text: r.error })
-        }
+        await this.saveCell(item, col, newVal)
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success',
+                    title: `${item.Internal_IP}　${col} 已更新`, timer: 1200, showConfirmButton: false })
     } catch (err) {
         console.error(err)
-        Swal.fire({ icon: 'error', title: '無法連線到伺服器' })
+        Swal.fire({ icon: 'error', title: '儲存失敗', text: err.message })
     }
+},
+
+// ===================== 多格統一更改 =====================
+bulkLabel(val) {
+    return val === '' ? '空值' : val
+},
+
+// 把選取範圍內的所有格子改成 val（未給 val 就用統一更改列的值）
+async applyBulk(val) {
+    if (this.bulkBusy) return
+    const col = this.selCol
+    if (!this.showBulk) return
+    const value = String(val !== undefined ? val : this.bulkValue ?? '')
+    const items = this.bulkItems.filter(it => String(it[col] ?? '') !== value)
+
+    if (!items.length) {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'info',
+                    title: '選取範圍已經都是這個值', timer: 1200, showConfirmButton: false })
+        return
+    }
+
+    const ok = await Swal.fire({
+        title: '統一更改',
+        html: `將 <b>${items.length}</b> 筆的 <b>${col}</b> 改為「<b>${this.bulkLabel(value)}</b>」？`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '確定更改',
+        cancelButtonText: '取消'
+    })
+    if (!ok.isConfirmed) return
+
+    this.bulkBusy = true
+    this.bulkProgress = 0
+    let done = 0, failed = []
+
+    // 一次送 6 筆，避免一次打爆後端
+    const CHUNK = 6
+    for (let i = 0; i < items.length; i += CHUNK) {
+        const part = items.slice(i, i + CHUNK)
+        await Promise.all(part.map(async it => {
+            try { await this.saveCell(it, col, value); done++ }
+            catch (e) { failed.push(it.Internal_IP) }
+            this.bulkProgress = done + failed.length
+        }))
+    }
+
+    this.bulkBusy = false
+
+    if (failed.length) {
+        Swal.fire({ icon: 'warning', title: `完成 ${done} 筆，失敗 ${failed.length} 筆`,
+                    html: `<div style="text-align:left;font-family:monospace;font-size:12px;max-height:200px;overflow:auto">${failed.join('<br>')}</div>` })
+    } else {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success',
+                    title: `${done} 筆 ${col} 已改為「${this.bulkLabel(value)}」`, timer: 1600, showConfirmButton: false })
+    }
+},
+
+bulkClear() {
+    return this.applyBulk('')
 },
 
 isZeroIp(item) {
@@ -886,6 +1080,7 @@ getBarColorClass(val) {
         })
 
         window.addEventListener('keydown', e => this.onGridKey(e));
+        window.addEventListener('mouseup', () => this.onMouseUp());
     }
 
 }).mount('#app');
